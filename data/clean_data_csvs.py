@@ -1,4 +1,4 @@
-
+from pathlib import Path
 import pandas as pd
 import csv
 import glob
@@ -9,10 +9,11 @@ import re
 # Config
 # -----------------------------
 # Folder containing the files
-input_folder = r"C:\Users\jacqueline.pielli\Downloads\crash data"
+# input_folder = r"C:\Users\jacqueline.pielli\Downloads\crash data"
 
 # Output CSV (pipe-delimited)
-output_path = os.path.join(input_folder, "vehicles_combined_limited.csv")
+ROOT = Path(__file__).resolve().parents[1]
+output_path = ROOT / "data" / "processed" / "vehicles_2017to2023.csv"
 
 # Base columns to keep
 base_columns = [
@@ -118,7 +119,7 @@ print(f"Total combined rows: {len(combined_df)}")
 # Ensure output directory exists
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-# Write CSV using pipe as delimiter.
+# Write CSV
 # QUOTE_MINIMAL will quote fields only when needed (e.g., if they contain special characters).
 combined_df.to_csv(
     output_path,
@@ -136,3 +137,4 @@ print(f"📁 CSV exported to: {output_path}")
 # -----------------------------
 print("\nFirst 50 rows of combined dataset:")
 print(combined_df.head(50))
+
