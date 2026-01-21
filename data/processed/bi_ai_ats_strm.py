@@ -16,7 +16,7 @@ st.set_page_config(page_title="Austin Crash Intelligence", layout="wide")
 def load_data():
     # Use absolute path or relative path
     file_name = 'atx_crash_2025.csv'
-    if not os.path.exists(file_name):
+    if not os.path.exists(file_name)
         return None
     
     df = pd.read_csv(file_name, low_memory=False)
