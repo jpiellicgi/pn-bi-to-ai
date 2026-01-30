@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # --- PATH CONFIGURATION ---
-DATA_DIR = r'C:\Users\itai.makubise\code_nova\poc_land\data'
+DATA_DIR = r'C:\Users\itai.makubise\code_nova\pn-bi-to-ai\data'
 CSV_PATH = os.path.join(DATA_DIR, 'atx_crash_2025.csv')
 
 # --- SMART LOGO LOADER ---
