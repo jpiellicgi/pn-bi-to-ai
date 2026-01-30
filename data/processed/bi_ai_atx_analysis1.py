@@ -5,6 +5,9 @@ from sklearn.cluster import KMeans
 from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 
+import os
+
+print(os.getcwd())
 # Load the Austin dataset
 df = pd.read_csv('atx_crash_2025.csv', low_memory=False)
 
@@ -15,6 +18,8 @@ df['DAY_WEEK'] = df['Crash timestamp'].dt.dayofweek
 
 # Define high severity: deaths or serious injuries
 df['high_severity'] = ((df['death_cnt'] > 0) | (df['sus_serious_injry_cnt'] > 0)).astype(int)
+
+
 
 # --- BI PLOT 1: Hourly Distribution ---
 plt.figure(figsize=(12, 6))
@@ -28,6 +33,7 @@ plt.savefig('bi_atx_hourly_distribution.png')
 
 
 # --- BI PLOT 2: Severity Pie Chart ---
+## stacked bar chart 
 severity_sums = df[['death_cnt', 'sus_serious_injry_cnt', 'tot_injry_cnt']].sum()
 labels = ['Deaths', 'Serious Injuries', 'Total Injuries (All)']
 plt.figure(figsize=(8, 8))
@@ -35,6 +41,7 @@ plt.pie(severity_sums, labels=labels, autopct='%1.1f%%', colors=['#e63946', '#f4
 plt.title('BI Insight: Austin Crash Severity Breakdown', fontsize=14)
 plt.savefig('bi_atx_severity_pie.png')
 # plt.close()
+
 
 # --- AI PLOT 1: Geospatial Risk Clustering ---
 geo_df = df[['latitude', 'longitude']].dropna()
@@ -52,8 +59,10 @@ plt.grid(True, alpha=0.3)
 plt.savefig('ai_atx_hotspots.png')
 # plt.close()
 
+
 # --- AI PLOT 2: Feature Importance ---
 # Convert booleans to ints
+# maps based on cost and see if we can filters on streamlit 
 df['onsys_fl_int'] = df['onsys_fl'].astype(int)
 df['private_dr_int'] = df['private_dr_fl'].astype(int)
 
