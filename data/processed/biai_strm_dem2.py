@@ -27,7 +27,7 @@ CSV_PATH1 = f"{DATA_DIR1}/{CSV_FILENAME1}"
 
 DATA_DIR2 = "https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data"
 CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
-CSV_URL2 = f"{DATA_DIR2}/{CSV_FILENAME2}"
+CSV_PATH2 = f"{DATA_DIR2}/{CSV_FILENAME2}"
 df_raw2 = pd.read_csv(CSV_PATH2, low_memory=False)
 
 # --- 3. SMART ASSET LOADER ---
