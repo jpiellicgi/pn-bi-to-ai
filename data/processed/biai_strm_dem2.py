@@ -403,10 +403,10 @@ def ranked_table_and_details(df: pd.DataFrame, top_n: int):
 def load_data(url:str):
     
     # Check if the file exists remotely
-    r = requests.get(url, timeout=30)
-    if r.status_code != 200:
-        st.error(f"Dataset not found or not accessible (HTTP {r.status_code}) at: {url}")
-        return None
+    # r = requests.get(url, timeout=30)
+    # if r.status_code != 200:
+    #     st.error(f"Dataset not found or not accessible (HTTP {r.status_code}) at: {url}")
+    #     return None
 
     df = pd.read_csv(url, low_memory=False)
     
