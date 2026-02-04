@@ -204,4 +204,3 @@ with tab4:
         st.plotly_chart(fig_bubble, use_container_width=True)
     else:
         st.warning("No Mode-specific data found in the current selection. Ensure columns like 'passenger_car_involved' are present.")
-        
