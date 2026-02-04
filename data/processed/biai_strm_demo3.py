@@ -315,7 +315,6 @@ def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
 
     st.pydeck_chart(deck, use_container_width=True)
 
-
 # def action_bars(df: pd.DataFrame):
 #     df_plot = df[df["best_action"].ne("no_change")].copy()
 
@@ -325,28 +324,41 @@ def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
 #         avg_pct=("pct_reduction_norm", "mean"),
 #     ).reset_index()
 
+#     base = alt.Chart(agg).encode(
+#         x=alt.X("best_action:N",
+#                 title="Best action",
+#                 sort="-y",
+#                 axis=alt.Axis(labelAngle=-35, labelLimit=180)),  # rotate + clip long labels
+#         tooltip=[
+#             "best_action",
+#             alt.Tooltip("total_reduction:Q", format=",.0f"),
+#             "locations",
+#             alt.Tooltip("avg_pct:Q", format=".1%")
+#         ],
+#     )
+
 #     bar1 = (
-#         alt.Chart(agg)
-#         .mark_bar()
-#         .encode(
-#             x=alt.X("best_action:N", title="Best action", sort="-y"),
-#             y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"),
-#             tooltip=["best_action", alt.Tooltip("total_reduction:Q", format=",.0f"),
-#                      "locations", alt.Tooltip("avg_pct:Q", format=".1%")],
-#         )
-#         .properties(height=260, title="Total expected reduction by action")
+#         base.mark_bar()
+#         .encode(y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"))
+#         .properties(height=320, title="Total expected reduction by action")
 #     )
 
 #     bar2 = (
-#         alt.Chart(agg)
-#         .mark_bar()
+#         alt.Chart(agg).mark_bar()
 #         .encode(
-#             x=alt.X("best_action:N", title="Best action", sort="-y"),
+#             x=alt.X("best_action:N",
+#                     title="Best action",
+#                     sort="-y",
+#                     axis=alt.Axis(labelAngle=-35, labelLimit=180)),
 #             y=alt.Y("locations:Q", title="# Locations"),
 #             tooltip=["best_action", "locations"],
 #         )
-#         .properties(height=260, title="Locations by action")
+#         .properties(height=320, title="Locations by action")
 #     )
+
+#     # ✅ Add padding so titles don’t collide with top of chart/container
+#     bar1 = bar1.configure_title(fontSize=14, offset=12).configure_view(strokeWidth=0)
+#     bar2 = bar2.configure_title(fontSize=14, offset=12).configure_view(strokeWidth=0)
 
 #     c1, c2 = st.columns(2)
 #     c1.altair_chart(bar1, use_container_width=True)
@@ -360,46 +372,56 @@ def action_bars(df: pd.DataFrame):
         avg_pct=("pct_reduction_norm", "mean"),
     ).reset_index()
 
-    base = alt.Chart(agg).encode(
-        x=alt.X("best_action:N",
+    # --- Chart 1: Total reduction ---
+    bar1 = (
+        alt.Chart(agg)
+        .mark_bar()
+        .encode(
+            x=alt.X(
+                "best_action:N",
                 title="Best action",
                 sort="-y",
-                axis=alt.Axis(labelAngle=-35, labelLimit=180)),  # rotate + clip long labels
-        tooltip=[
-            "best_action",
-            alt.Tooltip("total_reduction:Q", format=",.0f"),
-            "locations",
-            alt.Tooltip("avg_pct:Q", format=".1%")
-        ],
+                axis=alt.Axis(labelAngle=-35, labelLimit=180),
+            ),
+            y=alt.Y(
+                "total_reduction:Q",
+                title="Total expected reduction ($)",
+                axis=alt.Axis(format="~s"),  # ✅ 1.2M instead of 1200000
+            ),
+            tooltip=[
+                "best_action",
+                alt.Tooltip("total_reduction:Q", format=",.0f"),
+                "locations",
+                alt.Tooltip("avg_pct:Q", format=".1%"),
+            ],
+        )
+        .properties(height=340, title="Total expected reduction by action")
+        .configure_title(fontSize=14, offset=16)  # ✅ prevents title clipping
+        .configure_view(strokeWidth=0)
     )
 
-    bar1 = (
-        base.mark_bar()
-        .encode(y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"))
-        .properties(height=320, title="Total expected reduction by action")
-    )
-
+    # --- Chart 2: Locations ---
     bar2 = (
-        alt.Chart(agg).mark_bar()
+        alt.Chart(agg)
+        .mark_bar()
         .encode(
-            x=alt.X("best_action:N",
-                    title="Best action",
-                    sort="-y",
-                    axis=alt.Axis(labelAngle=-35, labelLimit=180)),
+            x=alt.X(
+                "best_action:N",
+                title="Best action",
+                sort="-y",
+                axis=alt.Axis(labelAngle=-35, labelLimit=180),
+            ),
             y=alt.Y("locations:Q", title="# Locations"),
             tooltip=["best_action", "locations"],
         )
-        .properties(height=320, title="Locations by action")
+        .properties(height=340, title="Locations by action")
+        .configure_title(fontSize=14, offset=16)
+        .configure_view(strokeWidth=0)
     )
-
-    # ✅ Add padding so titles don’t collide with top of chart/container
-    bar1 = bar1.configure_title(fontSize=14, offset=12).configure_view(strokeWidth=0)
-    bar2 = bar2.configure_title(fontSize=14, offset=12).configure_view(strokeWidth=0)
 
     c1, c2 = st.columns(2)
     c1.altair_chart(bar1, use_container_width=True)
     c2.altair_chart(bar2, use_container_width=True)
-
 
 def ranked_table_and_details(df: pd.DataFrame, top_n: int):
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
