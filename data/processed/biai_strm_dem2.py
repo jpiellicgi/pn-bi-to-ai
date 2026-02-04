@@ -21,11 +21,11 @@ st.set_page_config(
 )
 
 # --- 2. PATH CONFIGURATION ---
-DATA_DIR1 = r'C:\Users\jacqueline.pielli\Documents\Project Nova\BI to AI'
+DATA_DIR1 = r'https://github.com/jpiellicgi/pn-bi-to-ai/blob/main/data/processed'
 CSV_FILENAME1 = 'atx_crash_data_2018-2026_cleansed.csv'
 CSV_PATH1 = os.path.join(DATA_DIR1, CSV_FILENAME1)
 
-DATA_DIR2 = r'C:\Users\jacqueline.pielli\Documents\Project Nova\BI to AI'
+DATA_DIR2 = r'https://github.com/jpiellicgi/pn-bi-to-ai/blob/main/data/processed'
 CSV_FILENAME2 = 'df_prescriptive_final_20260204_102224.csv'
 CSV_PATH2 = os.path.join(DATA_DIR2, CSV_FILENAME2)
 df_raw2 = pd.read_csv(CSV_PATH2, low_memory=False)
