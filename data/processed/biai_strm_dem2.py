@@ -21,7 +21,7 @@ st.set_page_config(
 )
 
 # --- 2. PATH CONFIGURATION ---
-DATA_DIR1 = r'https://github.com/jpiellicgi/pn-bi-to-ai/blob/main/data'
+DATA_DIR1 = 'https://github.com/jpiellicgi/pn-bi-to-ai/blob/main/data/processed'
 CSV_FILENAME1 = 'atx_crash_data_2018-2026_cleansed.csv'
 CSV_PATH1 = f"{DATA_DIR1}/{CSV_FILENAME1}"
 
