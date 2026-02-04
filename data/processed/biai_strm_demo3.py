@@ -314,55 +314,7 @@ def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
     )
 
     st.pydeck_chart(deck, use_container_width=True)
-
-# def action_bars(df: pd.DataFrame):
-#     df_plot = df[df["best_action"].ne("no_change")].copy()
-
-#     agg = df_plot.groupby("best_action", dropna=False).agg(
-#         total_reduction=("expected_reduction_amount", "sum"),
-#         locations=("location_id", "count"),
-#         avg_pct=("pct_reduction_norm", "mean"),
-#     ).reset_index()
-
-#     base = alt.Chart(agg).encode(
-#         x=alt.X("best_action:N",
-#                 title="Best action",
-#                 sort="-y",
-#                 axis=alt.Axis(labelAngle=-35, labelLimit=180)),  # rotate + clip long labels
-#         tooltip=[
-#             "best_action",
-#             alt.Tooltip("total_reduction:Q", format=",.0f"),
-#             "locations",
-#             alt.Tooltip("avg_pct:Q", format=".1%")
-#         ],
-#     )
-
-#     bar1 = (
-#         base.mark_bar()
-#         .encode(y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"))
-#         .properties(height=320, title="Total expected reduction by action")
-#     )
-
-#     bar2 = (
-#         alt.Chart(agg).mark_bar()
-#         .encode(
-#             x=alt.X("best_action:N",
-#                     title="Best action",
-#                     sort="-y",
-#                     axis=alt.Axis(labelAngle=-35, labelLimit=180)),
-#             y=alt.Y("locations:Q", title="# Locations"),
-#             tooltip=["best_action", "locations"],
-#         )
-#         .properties(height=320, title="Locations by action")
-#     )
-
-#     # ✅ Add padding so titles don’t collide with top of chart/container
-#     bar1 = bar1.configure_title(fontSize=14, offset=12).configure_view(strokeWidth=0)
-#     bar2 = bar2.configure_title(fontSize=14, offset=12).configure_view(strokeWidth=0)
-
-#     c1, c2 = st.columns(2)
-#     c1.altair_chart(bar1, use_container_width=True)
-#     c2.altair_chart(bar2, use_container_width=True)
+    
 def action_bars(df: pd.DataFrame):
     df_plot = df[df["best_action"].ne("no_change")].copy()
 
@@ -396,7 +348,7 @@ def action_bars(df: pd.DataFrame):
             ],
         )
         .properties(height=340, title="Total expected reduction by action")
-        .configure_title(fontSize=14, offset=16)  # ✅ prevents title clipping
+        .configure_title(fontSize=14, offset=28)  # ✅ prevents title clipping
         .configure_view(strokeWidth=0)
     )
 
