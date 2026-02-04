@@ -21,7 +21,7 @@ st.set_page_config(
 )
 
 # --- 2. PATH CONFIGURATION ---
-DATA_DIR1 = 'https://github.com/jpiellicgi/pn-bi-to-ai/blob/main/data/processed'
+DATA_DIR1 = 'https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed'
 CSV_FILENAME1 = 'atx_crash_data_2018-2026_cleansed.csv'
 CSV_PATH1 = f"{DATA_DIR1}/{CSV_FILENAME1}"
 
@@ -400,9 +400,15 @@ def ranked_table_and_details(df: pd.DataFrame, top_n: int):
 
 # --- 4. DATA PIPELINE ---
 @st.cache_data
-def load_data():
-    if not os.path.exists(CSV_PATH1): return None
-    df = pd.read_csv(CSV_PATH1, low_memory=False)
+def load_data(url:str):
+    
+    # Check if the file exists remotely
+    r = requests.get(url, timeout=30)
+    if r.status_code != 200:
+        st.error(f"Dataset not found or not accessible (HTTP {r.status_code}) at: {url}")
+        return None
+
+    df = pd.read_csv(url, low_memory=False)
     
     # Preprocessing
     df['Crash timestamp'] = pd.to_datetime(df['Crash timestamp (US/Central)'], errors='coerce')
@@ -450,7 +456,7 @@ def load_data():
     
     return df.dropna(subset=['latitude', 'longitude'])
 
-df_raw1 = load_data()
+df_raw1 = load_data(CSV_PATH1)
 
 if df_raw1 is None:
     st.error(f"🛑 Dataset not found at {CSV_PATH1}")
