@@ -36,28 +36,26 @@ def load_data():
     
     df = pd.read_csv(CSV_PATH, low_memory=False)
     
-    # Preprocessing Timestamps
     df['Crash timestamp'] = pd.to_datetime(df['Crash timestamp (US/Central)'], errors='coerce')
     df['Year'] = df['Crash timestamp'].dt.year
     df['Month'] = df['Crash timestamp'].dt.month_name()
     df['HOUR'] = df['Crash timestamp'].dt.hour
     df['DAY_NAME'] = df['Crash timestamp'].dt.day_name()
     
-    # Severity Mapping
     sev_map = {1: "Fatal", 2: "Serious Injury", 3: "Minor Injury", 4: "Possible Injury", 0: "No Injury", 5: "Unknown"}
     df['Severity_Label'] = df['crash_sev_id'].map(sev_map)
     
-    # Coordinate Cleaning
     df['latitude'] = pd.to_numeric(df['latitude'], errors='coerce')
     df['longitude'] = pd.to_numeric(df['longitude'], errors='coerce')
     
-    # --- DATA SANITIZATION (The Fix for your Error) ---
-    # Convert 'N/A' strings to NaN, then fill NaN with 0
     if 'tot_injry_cnt' in df.columns:
         df['tot_injry_cnt'] = pd.to_numeric(df['tot_injry_cnt'], errors='coerce').fillna(0)
     
     df['crash_speed_limit'] = pd.to_numeric(df['crash_speed_limit'], errors='coerce').fillna(0)
     df['Estimated Total Comprehensive Cost'] = pd.to_numeric(df['Estimated Total Comprehensive Cost'], errors='coerce').fillna(0)
+    
+    # Create a cleaner speed-based sizing for markers
+    df['marker_size'] = df['crash_speed_limit'].apply(lambda x: x/10 if x > 0 else 2)
     
     return df.dropna(subset=['latitude', 'longitude'])
 
@@ -105,7 +103,6 @@ with m2:
     fatal_pct = (len(df[df['Severity_Label'] == 'Fatal']) / len(df) * 100) if len(df) > 0 else 0
     st.metric("Fatality Rate", f"{fatal_pct:.1f}%")
 with m3: 
-    # Safe calculation after sanitization
     total_injuries = int(df['tot_injry_cnt'].sum()) if 'tot_injry_cnt' in df.columns else 0
     st.metric("Total Injuries", f"{total_injuries:,}")
 with m4:
@@ -120,7 +117,6 @@ st.markdown("---")
 # --- TABS: DRILL-THROUGH ---
 tab1, tab2, tab3, tab4 = st.tabs(["📉 Trend Analysis", "🗺️ GIS Hotspots", "🏎️ Speed & Risk", "⏰ Temporal Patterns"])
 
-# (Tab logic remains the same as previous version)
 with tab1:
     st.subheader("Monthly Incident Volume (Year-over-Year)")
     trend_df = df.groupby(['Year', 'Month']).size().reset_index(name='Count')
@@ -130,17 +126,35 @@ with tab1:
     st.plotly_chart(fig_trend, use_container_width=True)
 
 with tab2:
-    st.subheader("Geospatial High-Injury Network")
-    fig_map = px.density_mapbox(df, lat='latitude', lon='longitude', z='Estimated Total Comprehensive Cost',
-                                radius=10, center=dict(lat=30.2672, lon=-97.7431), zoom=10,
-                                mapbox_style="carto-darkmatter")
-    fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=550)
+    # --- NEW TOGGLE AND GIS LOGIC ---
+    col_map_h, col_map_t = st.columns([3, 1])
+    with col_map_h:
+        st.subheader("Geospatial Safety Intelligence")
+    with col_map_t:
+        map_type = st.radio("Toggle Map View:", ["Economic Heatmap", "Incident Markers"], horizontal=True)
+
+    if map_type == "Economic Heatmap":
+        st.info("💡 **High Injury Network (HIN) Insight:** This heatmap weights incidents by their comprehensive economic cost. Intense red zones represent 'Safety Drains' where infrastructure improvements could yield the highest ROI.")
+        fig_map = px.density_mapbox(df, lat='latitude', lon='longitude', z='Estimated Total Comprehensive Cost',
+                                    radius=12, center=dict(lat=30.2672, lon=-97.7431), zoom=10,
+                                    mapbox_style="carto-darkmatter", color_continuous_scale="Reds")
+    else:
+        st.info("💡 **Incident Marker Insight:** Marker size represents **Speed Limit** and color represents **Severity**. Clusters of large, dark circles highlight dangerous high-speed conflict points.")
+        fig_map = px.scatter_mapbox(df, lat='latitude', lon='longitude', 
+                                    color='Severity_Label', size='marker_size',
+                                    hover_data=['rpt_street_name', 'crash_speed_limit', 'Year'],
+                                    center=dict(lat=30.2672, lon=-97.7431), zoom=10,
+                                    mapbox_style="carto-positron",
+                                    color_discrete_map={"Fatal": "black", "Serious Injury": "darkred", "Minor Injury": "orange"})
+
+    fig_map.update_layout(margin={"r":0,"t":0,"l":0,"b":0}, height=650)
     st.plotly_chart(fig_map, use_container_width=True)
 
 with tab3:
     st.subheader("Top 10 High-Risk Corridors")
     street_risk = df.groupby('rpt_street_name')['Estimated Total Comprehensive Cost'].sum().nlargest(10).reset_index()
-    fig_risk = px.bar(street_risk, x='Estimated Total Comprehensive Cost', y='rpt_street_name', orientation='h', color_continuous_scale='Reds')
+    fig_risk = px.bar(street_risk, x='Estimated Total Comprehensive Cost', y='rpt_street_name', 
+                      orientation='h', color='Estimated Total Comprehensive Cost', color_continuous_scale='Reds')
     st.plotly_chart(fig_risk, use_container_width=True)
 
 with tab4:
