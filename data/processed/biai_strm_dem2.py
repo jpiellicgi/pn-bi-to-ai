@@ -13,8 +13,6 @@ import streamlit as st
 import pydeck as pdk
 import altair as alt
 
-import requests
-
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="TxDOT | Austin Safety Intelligence Elite", 
@@ -23,23 +21,12 @@ st.set_page_config(
 )
 
 # --- 2. PATH CONFIGURATION ---
-DATA_DIR1 = 'https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed'
+DATA_DIR = 'https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed'
 CSV_FILENAME1 = 'atx_crash_data_2018-2026_cleansed.csv'
-CSV_PATH1 = f"{DATA_DIR1}/{CSV_FILENAME1}"
+CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 
-
-st.write("URL:", CSV_PATH1)
-
-r = requests.get(CSV_PATH1, timeout=30)
-st.write("HTTP status:", r.status_code)
-st.write("Content-Type:", r.headers.get("content-type"))
-st.write("Bytes:", len(r.content))
-st.text("First 300 chars:\n" + r.text[:300])
-
-
-# DATA_DIR2 = r'https://github.com/jpiellicgi/pn-bi-to-ai/blob/main/data'
 # CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
-# CSV_PATH2 = f"{DATA_DIR2}/{CSV_FILENAME2}"
+# CSV_PATH2 = f"{DATA_DIR}/{CSV_FILENAME2}"
 # df_raw2 = pd.read_csv(CSV_PATH2, low_memory=False)
 
 # --- 3. SMART ASSET LOADER ---
