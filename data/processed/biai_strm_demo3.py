@@ -348,7 +348,7 @@ def action_bars(df: pd.DataFrame):
             ],
         )
         .properties(height=340, title="Total expected reduction by action")
-        .configure_title(fontSize=14, offset=28)  # ✅ prevents title clipping
+        .configure_title(fontSize=14, offset=24)  # ✅ prevents title clipping
         .configure_view(strokeWidth=0)
     )
 
