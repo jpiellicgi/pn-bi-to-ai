@@ -33,7 +33,7 @@ CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 def get_txdot_logo():
     extensions = ['*.png', '*.jpg', '*.jpeg', '*.svg', '*.webp']
     for ext in extensions:
-        pattern = os.path.join(DATA_DIR1, 'txdot' + ext)
+        pattern = os.path.join(DATA_DIR, 'txdot' + ext)
         files = glob.glob(pattern)
         if files: return files[0]
     return None
