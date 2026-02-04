@@ -347,7 +347,7 @@ def action_bars(df: pd.DataFrame):
                 alt.Tooltip("avg_pct:Q", format=".1%"),
             ],
         )
-        .properties(height=340, title="Total expected reduction by action")
+        .properties(height=340, title="Total expected reduction by action", padding={"top":30})
         .configure_title(fontSize=14, offset=24)  # ✅ prevents title clipping
         .configure_view(strokeWidth=0)
     )
