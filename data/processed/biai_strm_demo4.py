@@ -488,11 +488,10 @@ else:
 st.title("Safety Intelligence Dashboard")
 st.caption(f"Currently Analyzing: **{current_focus}**")
 
-k1, k2, k3, k4 = st.columns(4)
+k1, k2, k3 = st.columns(3)
 k1.metric("Crash Volume", f"{len(df):,}")
 k2.metric("Lives Lost", int(df["death_cnt"].sum()))
-k3.metric("Avg Speed Limit", f"{df['crash_speed_limit'].mean():.1f} MPH")
-k4.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
+k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 
 st.markdown("---")
 
@@ -584,22 +583,22 @@ with tab2:
 # --- TAB 3 ---
 with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
-    r1c1, r1c2= st.columns(2) #removed r1c3 for testing
-    with r1c1:
-        hr_vol = df.groupby("HOUR").size().reset_index(name="Volume")
-        st.plotly_chart(
-            px.line(hr_vol, x="HOUR", y="Volume", markers=True, color_discrete_sequence=["#6A0DAD"]),
-            use_container_width=True,
-        )
+    r1c2, r1c3 = st.columns(2) #removed r1c1 for testing
+    # with r1c1:
+    #     hr_vol = df.groupby("HOUR").size().reset_index(name="Volume")
+    #     st.plotly_chart(
+    #         px.line(hr_vol, x="HOUR", y="Volume", markers=True, color_discrete_sequence=["#6A0DAD"]),
+    #         use_container_width=True,
+    #     )
     with r1c2:
         fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r)
         st.plotly_chart(fig_pie, use_container_width=True)
     
-    # with r1c3: #EW added but causing issues
-    #     df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"])["ID"].count().reset_index()
-    #     df_speed_severity.columns = ["Speed_Bin", "Severity_Label", "Number of Acccidents"]
-    #     fig_speed_severity= st.bar_chart(df_speed_severity, x="Speed_Bin", y="Number of Acccidents", color="Severity_Label")
-    #     st.plotly_chart(fig_speed_severity)
+    with r1c3:
+        df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"])["ID"].count().reset_index()
+        df_speed_severity.columns = ["Speed_Bin", "Severity_Label", "Number of Acccidents"]
+        fig_speed_severity= st.bar_chart(df_speed_severity, x="Speed_Bin", y="Number of Acccidents", color="Severity_Label")
+        st.plotly_chart(fig_speed_severity)
 
 # --- TAB 4 ---
 with tab4:    
