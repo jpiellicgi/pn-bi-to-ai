@@ -25,7 +25,7 @@ alt.data_transformers.disable_max_rows()
 DATA_DIR = "https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed"
 LOCAL_DATA_DIR = 'data/processed'
 
-CSV_FILENAME1 = "atx_crash_data_2018-2026_cleansed-death count.csv"
+CSV_FILENAME1 = "atx_crash_data_2018-2026_clean.csv"
 CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 
 CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
@@ -507,7 +507,7 @@ with tab1:
     shap_output, historicaloverview = st.columns([1, 2], gap="large")
     with shap_output:
         st.subheader("Top Predictors of Estimated Cost")
-        st.image("data/processed/BI to AI SHAP.png", width=800)
+        st.image("data/processed/BI to AI SHAP vf.png", width=800)
         st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. The most important features for predicting estimated cost were pedestrian involved, motorcycle involved, and On TxDOT highway system. ")
     
     with historicaloverview:
