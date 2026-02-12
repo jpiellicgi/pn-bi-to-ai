@@ -266,7 +266,7 @@ def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
     df = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
 
     
-CTION_COLORS_RGB = {
+ACTION_COLORS_RGB = {
         "reduce_speed_limit":   (227, 25, 55),
         "increase_enforcement":      (82, 54, 171),
         "improve_crosswalks":  (110, 63, 237),
