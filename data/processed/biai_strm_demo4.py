@@ -832,8 +832,6 @@ with tab6:
     with colL:
         st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
 
-        st.markdown("#### Filters")
-
         selected_actions = st.multiselect(
             "Recommended action",
             options=all_actions,
