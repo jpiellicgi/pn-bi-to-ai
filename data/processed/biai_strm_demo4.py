@@ -38,17 +38,30 @@ MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5a
 # --- 3. SMART ASSET LOADER ---
 def get_cgi_logo():
     """
-    Locates the corporate logo by checking local file extensions and URL patterns[cite: 111].
+    Locates the CGI corporate logo by checking local files and remote URL.
     """
-    extensions = ["*.png", "*.jpg", "*.jpeg", "*.svg", "*.webp"]
-    for ext in extensions:
-        pattern = os.path.join(DATA_DIR, "CGI_logo_color_rgb" + ext)
-        files = glob.glob(pattern)
-        if files:
-            return files[0]
+    logo_filename = "CGI_logo_color_rgb.jpg"
+    github_logo_url = f"{DATA_DIR}/{logo_filename}"
+    
+    # Check local path first
+    if os.path.exists(logo_filename):
+        return logo_filename
+    
+    # Check GitHub URL
+    try:
+        response = requests.head(github_logo_url, timeout=5)
+        if response.status_code == 200:
+            return github_logo_url
+    except:
+        pass
+        
     return None
 
 LOGO_PATH = get_cgi_logo()
+
+# Render logo at the very top of the main area
+if LOGO_PATH:
+    st.image(LOGO_PATH, width=180)
 
 # ----------------------------
 # Shared: Safe remote CSV loader
@@ -56,7 +69,7 @@ LOGO_PATH = get_cgi_logo()
 @st.cache_data(show_spinner=False)
 def read_csv_url(url: str) -> pd.DataFrame:
     """
-    Robustly fetch CSV from a URL and fail clearly if empty[cite: 112].
+    Robustly fetch CSV from a URL and fail clearly if empty.
     """
     r = requests.get(url, timeout=60)
     if r.status_code != 200:
@@ -71,7 +84,7 @@ def read_csv_url(url: str) -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def load_partner_data(url: str) -> pd.DataFrame:
     """
-    Standardizes crash data, mappings, and involvement flags[cite: 113, 115].
+    Standardizes crash data, mappings, and involvement flags.
     """
     try:
         df = read_csv_url(url)
@@ -119,7 +132,12 @@ def load_partner_data(url: str) -> pd.DataFrame:
 # ----------------------------
 # Prescriptive Tab Helpers
 # ----------------------------
-REQUIRED_COLS = ["latitude", "longitude", "Address", "pred_est_ttl_comp_cost", "best_action", "expected_reduction_amount", "pct_reduction", "ai_rationale"]
+# (Defining a simple kpi_row since it was called but not defined in the snippet)
+def kpi_row(dfp):
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total Reduction", fmt_dollars(dfp["expected_reduction_amount"].sum()))
+    c2.metric("Avg % Reduction", f"{(dfp['pct_reduction_norm'].mean()*100):.1f}%")
+    c3.metric("Locations", len(dfp))
 
 def _coerce_numeric(df, cols):
     out = df.copy()
@@ -136,10 +154,6 @@ def normalize_pct_reduction(series):
 
 def make_location_id(df):
     return df["latitude"].round(5).astype(str) + ", " + df["longitude"].round(5).astype(str)
-
-def action_color_map(actions):
-    palette = [(31, 119, 180), (255, 127, 14), (44, 160, 44), (214, 39, 40), (148, 103, 189)]
-    return {a: palette[i % len(palette)] for i, a in enumerate(actions)}
 
 def compact_text(s, n=140):
     s = str(s).strip()
@@ -190,7 +204,8 @@ except Exception:
 
 # --- SIDEBAR ---
 with st.sidebar:
-    if LOGO_PATH: st.image(LOGO_PATH, use_container_width=True)
+    if LOGO_PATH: 
+        st.image(LOGO_PATH, use_container_width=True)
     st.title("Global Filters")
     all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
     selected_years = st.multiselect("📅 Fiscal Years:", all_years, default=all_years[-4:])
@@ -209,8 +224,10 @@ st.caption(f"Analyzing: **{selected_street}**")
 t1, t2, t3, t4, t5, t6 = st.tabs(["Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
 
 with t1:
-    st.image("data/processed/BI to AI SHAP vf.png", width=800)
+    st.image("https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed/BI%20to%20AI%20SHAP%20vf.png", width=800)
     st.plotly_chart(px.bar(df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index(), x="Year", y="Estimated Total Comprehensive Cost", color_continuous_scale="Purples"), use_container_width=True)
+
+
 
 with t2:
     st.plotly_chart(px.density_mapbox(df, lat="latitude", lon="longitude", z="Estimated Total Comprehensive Cost", radius=12, zoom=10, mapbox_style="open-street-map", color_continuous_scale="Purples"), use_container_width=True)
