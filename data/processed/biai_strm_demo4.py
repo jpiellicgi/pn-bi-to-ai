@@ -474,16 +474,15 @@ except Exception as e:
 with st.sidebar:
     if LOGO_PATH:
         st.image(LOGO_PATH, use_container_width=True)
-    st.title("Strategic Filters")
+    st.title("Global Filters")
 
     all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
     selected_years = st.multiselect("📅 Fiscal Years:", all_years, default=all_years[-4:])
 
     top_10_names = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
 
-    st.subheader("📍 Target Selection")
     corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
-    selected_street = st.selectbox("Select a Corridor to Focus Analysis:", corridor_options)
+    selected_street = st.selectbox("📍 Corridor:", corridor_options)
 
 
 # --- 6. APPLY FILTERS ---
