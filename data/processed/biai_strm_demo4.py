@@ -334,65 +334,70 @@ def kpi_row(df: pd.DataFrame):
 
 #     st.pydeck_chart(deck, use_container_width=True)
 
-def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
-    # Keep your top-N logic
-    df = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+def build_map(df_in: pd.DataFrame, top_n: int, all_actions: list):
+    # Defensive: ensure we actually got a DataFrame
+    if not isinstance(df_in, pd.DataFrame):
+        raise TypeError(f"build_map(df_in=...) expected a pandas DataFrame, got {type(df_in)}")
 
-    # ---- Define your action -> RGB mapping (as you already have) ----
+    # Work on a copy with top-N
+    df = (
+        df_in.sort_values("expected_reduction_amount", ascending=False)
+             .head(top_n)
+             .copy()
+    )
+
+    # ---- Your action -> RGB mapping (as provided) ----
     ACTION_COLORS_RGB = {
-        "reduce_speed_limit":         (227, 25, 55),
-        "increase_enforcement":       (82, 54, 171),
-        "improve_crosswalks":         (110, 63, 237),
-        "micromobility_zone_controls":(255, 115, 98),
-        "work_zone_controls":         (203, 195, 230),
-        "add_speed_bumps":            (168, 36, 101),
+        "reduce_speed_limit":          (227, 25, 55),
+        "increase_enforcement":        (82, 54, 171),
+        "improve_crosswalks":          (110, 63, 237),
+        "micromobility_zone_controls": (255, 115, 98),
+        "work_zone_controls":          (203, 195, 230),
+        "add_speed_bumps":             (168, 36, 101),
     }
 
-    # Convert RGB tuples to HEX strings for Plotly discrete color mapping
+    # Convert RGB tuples to HEX strings for Plotly
     def rgb_to_hex(rgb_tuple):
         r, g, b = rgb_tuple
         return f"#{r:02X}{g:02X}{b:02X}"
 
-    action_to_hex = {
-        k: rgb_to_hex(v) for k, v in ACTION_COLORS_RGB.items()
-    }
-
-    # Fallback color (gray) for any unseen actions
+    action_to_hex_full = {k: rgb_to_hex(v) for k, v in ACTION_COLORS_RGB.items()}
     DEFAULT_HEX = "#787878"
 
-    # Prepare hover fields (reuse your displays)
+    # Plotly expects a dict of category->hex. Build it only for categories present to avoid warnings.
+    present_actions = sorted(df["best_action"].dropna().unique().tolist())
+    color_map_present = {a: action_to_hex_full.get(a, DEFAULT_HEX) for a in present_actions}
+
+    # Display columns (reuse your formatting helpers)
     df["pct_reduction_display"] = (df["pct_reduction_norm"] * 100).round(1).astype(str) + "%"
     df["pred_est_ttl_comp_cost_display"] = df["pred_est_ttl_comp_cost"].map(fmt_dollars)
     df["expected_reduction_amount_display"] = df["expected_reduction_amount"].map(fmt_dollars)
     df["expected_cost_after_action_display"] = df["expected_cost_after_action"].map(fmt_dollars)
 
-    # Centering / zoom
+    # Center and zoom
     center_lat = float(df["latitude"].mean()) if len(df) else 30.2672
     center_lon = float(df["longitude"].mean()) if len(df) else -97.7431
-    # Simple heuristic for zoom based on spread (optional)
     zoom = 10 if len(df) else 4
 
-    # ---- Build Plotly scatter_mapbox (with OpenStreetMap tiles; no token required) ----
-    # We'll use color as category and feed a discrete color map.
-    # `size` can be tied to your "point_size" column if present.
+    # If you have a 'point_size' column, use it; otherwise keep uniform markers
     size_col = "point_size" if "point_size" in df.columns else None
 
+    # Build the figure
     fig = px.scatter_mapbox(
         df,
         lat="latitude",
         lon="longitude",
         color="best_action",
         size=size_col,
-        size_max=20,  # adjust if you want larger max markers
-        color_discrete_map=lambda x: action_to_hex.get(x, DEFAULT_HEX),
-        # Custom hovertemplate via hover_data=False + update_traces below
+        size_max=20,                               # tune as desired
+        color_discrete_map=color_map_present,      # dict, not lambda
         hover_name=None,
         hover_data=None,
         zoom=zoom,
         height=520,
     )
 
-    # Use OpenStreetMap (free, no token)
+    # OpenStreetMap tiles (free, no token)
     fig.update_layout(
         mapbox_style="open-street-map",
         mapbox_center={"lat": center_lat, "lon": center_lon},
@@ -401,19 +406,19 @@ def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
         legend_title_text="Best action",
     )
 
-    # If you want uniform marker size ignoring any 'point_size' column:
+    # If you didn’t use a size column, set a default marker size
     if size_col is None:
         fig.update_traces(marker={"size": 10})
 
-    # Stroke and opacity to mimic your pydeck style
+    # Stroke & opacity similar to your pydeck style
     fig.update_traces(
         marker=dict(
-            opacity=0.85,            # similar to pydeck opacity
-            line=dict(width=1, color="rgba(20,20,20,0.9)")  # stroke around points
+            opacity=0.85,
+            line=dict(width=1, color="rgba(20,20,20,0.9)"),
         )
     )
 
-    # Build a hovertemplate similar to your pydeck tooltip
+    # Hovertemplate (matches your pydeck tooltip content/order)
     hovertemplate = (
         "<b>Address</b>: %{customdata[0]}<br>"
         "<b>Location</b>: %{customdata[1]}<br>"
@@ -426,8 +431,7 @@ def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
         "<b>Rationale</b>: %{customdata[7]}<extra></extra>"
     )
 
-    # Attach customdata in the same order used in hovertemplate
-    # Use your existing "address_short", etc., columns
+    # Ensure columns exist; if not, create empty strings to avoid KeyErrors
     customdata_cols = [
         "address_short",
         "location_id",
@@ -438,14 +442,14 @@ def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
         "expected_cost_after_action_display",
         "ai_rationale_short",
     ]
-    # Ensure missing columns don't crash
     for c in customdata_cols:
         if c not in df.columns:
             df[c] = ""
 
     fig.update_traces(
         customdata=df[customdata_cols].values,
-        hovertemplate=hovertemplate
+        hovertemplate=hovertemplate,
+        hoverinfo="skip",  # rely entirely on hovertemplate
     )
 
     # Render in Streamlit
