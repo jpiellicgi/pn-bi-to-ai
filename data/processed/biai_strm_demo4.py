@@ -757,7 +757,7 @@ with tab6:
       }
 
       .presc-top .kpi-value {
-        font-weight: 900;
+        font-weight: 600;
         font-size: 32px !important;
         line-height: 1.1;
         margin: 0 0 0.1rem 0;
@@ -896,7 +896,7 @@ with tab6:
         
         #             <div style="
         #                 font-size:1.8rem;         /* <--- BIG VALUE */
-        #                 font-weight:600;          /* <--- MAX BOLD */
+        #                 font-weight:400;          /* <--- MAX BOLD */
         #                 line-height:1.1;
         #                 margin-bottom:2px;
         #                 color:var(--text-color);
@@ -951,12 +951,12 @@ with tab6:
                                 font-size: 0.9rem;
                                 color: var(--secondary-text-color);
                                 margin: 0 0 4px 0;       /* tight spacing above the value */
-                                font-weight: 600;
+                                font-weight: 400;
                             }}
         
                             .kpi-value {{
                                 font-size: {size_rem}rem; /* BIG, TUNABLE */
-                                font-weight: 900;         /* max bold */
+                                font-weight: 600;         /* max bold */
                                 line-height: 1.1;
                                 margin: 0 0 2px 0;       /* tighten space above footnote */
                                 color: var(--text-color);
@@ -966,7 +966,7 @@ with tab6:
                                 font-size: 0.8rem;
                                 color: var(--secondary-text-color);
                                 margin: 0;
-                                font-weight: 500;
+                                font-weight: 400;
                             }}
                         </style>
                     </head>
