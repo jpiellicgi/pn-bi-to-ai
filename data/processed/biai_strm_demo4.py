@@ -9,7 +9,7 @@ import streamlit as st
 from streamlit.components.v1 import html
 import plotly.express as px
 import plotly.graph_objects as go
-# import pydeck as pdk
+import pydeck as pdk
 import altair as alt
 import requests
 
@@ -33,7 +33,7 @@ CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
 CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 
-# MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
+MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
 
 
 # --- 3. SMART ASSET LOADER (NOTE: glob works for local files, not URLs) ---
@@ -264,193 +264,75 @@ def kpi_row(df: pd.DataFrame):
     c3.metric("Most recommended action", top_action)
 
 
-# def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
-#     df = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
+    df = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
 
     
-#     ACTION_COLORS_RGB = {
-#             "reduce_speed_limit":   (227, 25, 55),
-#             "increase_enforcement":      (82, 54, 171),
-#             "improve_crosswalks":  (110, 63, 237),
-#             "micromobility_zone_controls":    (255, 115, 98),
-#             "work_zone_controls":   (203, 195, 230),
-#             "add_speed_bumps":    (168, 36, 101)
-#         }
-
-#     cmap = action_color_map(all_actions)
-#     df["color"] = df["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
-
-#     df["pct_reduction_display"] = (df["pct_reduction_norm"] * 100).round(1).astype(str) + "%"
-#     df["pred_est_ttl_comp_cost_display"] = df["pred_est_ttl_comp_cost"].map(fmt_dollars)
-#     df["expected_reduction_amount_display"] = df["expected_reduction_amount"].map(fmt_dollars)
-#     df["expected_cost_after_action_display"] = df["expected_cost_after_action"].map(fmt_dollars)
-
-#     center_lat = float(df["latitude"].mean()) if len(df) else 30.2672
-#     center_lon = float(df["longitude"].mean()) if len(df) else -97.7431
-
-#     view_state = pdk.ViewState(latitude=center_lat, longitude=center_lon, zoom=10 if len(df) else 4, pitch=0)
-
-#     layer = pdk.Layer(
-#         "ScatterplotLayer",
-#         data=df,
-#         get_position="[longitude, latitude]",
-#         get_fill_color="color",
-#         get_radius="point_size",
-#         radius_scale=1,
-#         radius_min_pixels=2,
-#         radius_max_pixels=80,
-#         pickable=True,
-#         opacity=0.75,
-#         stroked=True,
-#         get_line_color=[20, 20, 20],
-#         line_width_min_pixels=1,
-#     )
-
-#     tooltip = {
-#         "html": """
-#         <div style="max-width: 360px;">
-#           <div><b>Address</b>: {address_short}</div>
-#           <div><b>Location</b>: {location_id}</div>
-#           <div><b>Action</b>: {best_action}</div>
-#           <div><b>Risk score</b>: {pred_est_ttl_comp_cost_display}</div>
-#           <div><b>Expected reduction</b>: {expected_reduction_amount_display}</div>
-#           <div><b>% reduction</b>: {pct_reduction_display}</div>
-#           <div><b>Cost after action</b>: {expected_cost_after_action_display}</div>
-#           <hr style="margin:6px 0;" />
-#           <div><b>Rationale</b>: {ai_rationale_short}</div>
-#         </div>
-#         """,
-#         "style": {"backgroundColor": "rgba(25, 25, 25, 0.92)", "color": "white"},
-#     }
-
-#     deck = pdk.Deck(
-#         layers=[layer],
-#         initial_view_state=view_state,
-#         tooltip=tooltip,
-#         map_style="mapbox://styles/mapbox/streets-v12",
-#         api_keys={"mapbox": MAPBOX_TOKEN},
-#         map_provider="mapbox",
-#     )
-
-#     st.pydeck_chart(deck, use_container_width=True)
-
-def build_map(df_in: pd.DataFrame, top_n: int, all_actions: list):
-    # Defensive: ensure we actually got a DataFrame
-    if not isinstance(df_in, pd.DataFrame):
-        raise TypeError(f"build_map(df_in=...) expected a pandas DataFrame, got {type(df_in)}")
-
-    # Work on a copy with top-N
-    df = (
-        df_in.sort_values("expected_reduction_amount", ascending=False)
-             .head(top_n)
-             .copy()
-    )
-
-    # ---- Your action -> RGB mapping (as provided) ----
     ACTION_COLORS_RGB = {
-        "reduce_speed_limit":          (227, 25, 55),
-        "increase_enforcement":        (82, 54, 171),
-        "improve_crosswalks":          (110, 63, 237),
-        "micromobility_zone_controls": (255, 115, 98),
-        "work_zone_controls":          (203, 195, 230),
-        "add_speed_bumps":             (168, 36, 101),
-    }
+            "reduce_speed_limit":   (227, 25, 55),
+            "increase_enforcement":      (82, 54, 171),
+            "improve_crosswalks":  (110, 63, 237),
+            "micromobility_zone_controls":    (255, 115, 98),
+            "work_zone_controls":   (203, 195, 230),
+            "add_speed_bumps":    (168, 36, 101)
+        }
 
-    # Convert RGB tuples to HEX strings for Plotly
-    def rgb_to_hex(rgb_tuple):
-        r, g, b = rgb_tuple
-        return f"#{r:02X}{g:02X}{b:02X}"
+    cmap = action_color_map(all_actions)
+    df["color"] = df["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
 
-    action_to_hex_full = {k: rgb_to_hex(v) for k, v in ACTION_COLORS_RGB.items()}
-    DEFAULT_HEX = "#787878"
-
-    # Plotly expects a dict of category->hex. Build it only for categories present to avoid warnings.
-    present_actions = sorted(df["best_action"].dropna().unique().tolist())
-    color_map_present = {a: action_to_hex_full.get(a, DEFAULT_HEX) for a in present_actions}
-
-    # Display columns (reuse your formatting helpers)
     df["pct_reduction_display"] = (df["pct_reduction_norm"] * 100).round(1).astype(str) + "%"
     df["pred_est_ttl_comp_cost_display"] = df["pred_est_ttl_comp_cost"].map(fmt_dollars)
     df["expected_reduction_amount_display"] = df["expected_reduction_amount"].map(fmt_dollars)
     df["expected_cost_after_action_display"] = df["expected_cost_after_action"].map(fmt_dollars)
 
-    # Center and zoom
     center_lat = float(df["latitude"].mean()) if len(df) else 30.2672
     center_lon = float(df["longitude"].mean()) if len(df) else -97.7431
-    zoom = 10 if len(df) else 4
 
-    # If you have a 'point_size' column, use it; otherwise keep uniform markers
-    size_col = "point_size" if "point_size" in df.columns else None
+    view_state = pdk.ViewState(latitude=center_lat, longitude=center_lon, zoom=10 if len(df) else 4, pitch=0)
 
-    # Build the figure
-    fig = px.scatter_mapbox(
-        df,
-        lat="latitude",
-        lon="longitude",
-        color="best_action",
-        size=size_col,
-        size_max=20,                               # tune as desired
-        color_discrete_map=color_map_present,      # dict, not lambda
-        hover_name=None,
-        hover_data=None,
-        zoom=zoom,
-        height=520,
+    layer = pdk.Layer(
+        "ScatterplotLayer",
+        data=df,
+        get_position="[longitude, latitude]",
+        get_fill_color="color",
+        get_radius="point_size",
+        radius_scale=1,
+        radius_min_pixels=2,
+        radius_max_pixels=80,
+        pickable=True,
+        opacity=0.75,
+        stroked=True,
+        get_line_color=[20, 20, 20],
+        line_width_min_pixels=1,
     )
 
-    # OpenStreetMap tiles (free, no token)
-    fig.update_layout(
-        mapbox_style="open-street-map",
-        mapbox_center={"lat": center_lat, "lon": center_lon},
-        margin=dict(l=0, r=0, t=40, b=0),
-        title={"text": "Locations by Action", "x": 0.02, "xanchor": "left"},
-        legend_title_text="Best action",
+    tooltip = {
+        "html": """
+        <div style="max-width: 360px;">
+          <div><b>Address</b>: {address_short}</div>
+          <div><b>Location</b>: {location_id}</div>
+          <div><b>Action</b>: {best_action}</div>
+          <div><b>Risk score</b>: {pred_est_ttl_comp_cost_display}</div>
+          <div><b>Expected reduction</b>: {expected_reduction_amount_display}</div>
+          <div><b>% reduction</b>: {pct_reduction_display}</div>
+          <div><b>Cost after action</b>: {expected_cost_after_action_display}</div>
+          <hr style="margin:6px 0;" />
+          <div><b>Rationale</b>: {ai_rationale_short}</div>
+        </div>
+        """,
+        "style": {"backgroundColor": "rgba(25, 25, 25, 0.92)", "color": "white"},
+    }
+
+    deck = pdk.Deck(
+        layers=[layer],
+        initial_view_state=view_state,
+        tooltip=tooltip,
+        map_style="mapbox://styles/mapbox/streets-v12",
+        api_keys={"mapbox": MAPBOX_TOKEN},
+        map_provider="mapbox",
     )
 
-    # If you didn’t use a size column, set a default marker size
-    if size_col is None:
-        fig.update_traces(marker={"size": 10})
-
-    fig.update_traces(
-            opacity=0.85,               # ✅ trace-level opacity
-            marker=dict(line=dict(width=1, color="rgba(20,20,20,0.9)"))
-        )
-
-    # Hovertemplate (matches your pydeck tooltip content/order)
-    hovertemplate = (
-        "<b>Address</b>: %{customdata[0]}<br>"
-        "<b>Location</b>: %{customdata[1]}<br>"
-        "<b>Action</b>: %{customdata[2]}<br>"
-        "<b>Risk score</b>: %{customdata[3]}<br>"
-        "<b>Expected reduction</b>: %{customdata[4]}<br>"
-        "<b>% reduction</b>: %{customdata[5]}<br>"
-        "<b>Cost after action</b>: %{customdata[6]}<br>"
-        "<hr style='margin:6px 0;'/>"
-        "<b>Rationale</b>: %{customdata[7]}<extra></extra>"
-    )
-
-    # Ensure columns exist; if not, create empty strings to avoid KeyErrors
-    customdata_cols = [
-        "address_short",
-        "location_id",
-        "best_action",
-        "pred_est_ttl_comp_cost_display",
-        "expected_reduction_amount_display",
-        "pct_reduction_display",
-        "expected_cost_after_action_display",
-        "ai_rationale_short",
-    ]
-    for c in customdata_cols:
-        if c not in df.columns:
-            df[c] = ""
-
-    fig.update_traces(
-        customdata=df[customdata_cols].values,
-        hovertemplate=hovertemplate,
-        hoverinfo="skip",  # rely entirely on hovertemplate
-    )
-
-    # Render in Streamlit
-    st.plotly_chart(fig, use_container_width=True)
+    st.pydeck_chart(deck, use_container_width=True)
     
 def action_bars(df: pd.DataFrame):
     df_plot = df[df["best_action"].ne("no_change")].copy()
