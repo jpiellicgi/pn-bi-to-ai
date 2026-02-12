@@ -753,50 +753,141 @@ with tab6:
 
     all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
 
-    # Controls inside the tab (so we don't fight the shared sidebar)
-    cA, cB = st.columns([2, 1])
-    with cA:
+    # ========= Styling (optional but recommended) =========
+    st.markdown("""
+    <style>
+      /* Left panel look */
+      .left-panel {
+        border: 1px solid rgba(49,51,63,0.12); border-radius: 10px;
+        padding: 0.75rem; background: var(--secondary-background-color);
+      }
+      /* KPI cards */
+      .kpi-card {
+        border: 1px solid rgba(49,51,63,0.12);
+        border-radius: 10px; padding: 0.9rem 1rem; background: var(--background-color);
+        margin-bottom: 0.75rem;
+      }
+      .kpi-title { font-size: 0.85rem; color: var(--secondary-text-color); margin-bottom: 0.2rem; }
+      .kpi-value { font-weight: 600; font-size: 1.35rem; line-height: 1.2; margin-bottom: 0.25rem; }
+      .kpi-foot { color: var(--secondary-text-color); font-size: 0.8rem; }
+
+      /* Optional: make left column sticky for long pages (comment out if not desired) */
+      @media (min-width: 768px) {
+        .sticky-col { position: sticky; top: 4rem; } /* adjust top for your header height */
+      }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ========= 2-column layout: Filters (L) and KPIs + Content (R) =========
+    colL, colR = st.columns([1, 3], gap="large")
+
+    # --- LEFT: Vertical filters for this tab ---
+    with colL:
+        st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
+        st.markdown("#### Filters")
+
+        # (Optional) Mirror Corridor here and sync with global if desired
+        # Uncomment to display a synced Corridor in the left panel:
+        # def _sync_corridor(local_key="local_corridor", global_key="global_corridor"):
+        #     if global_key in st.session_state and local_key not in st.session_state:
+        #         st.session_state[local_key] = st.session_state[global_key]
+        #     if (local_key in st.session_state and global_key in st.session_state
+        #         and st.session_state[local_key] != st.session_state[global_key]):
+        #         st.session_state[global_key] = st.session_state[local_key]
+        #
+        # corridor_options = ["All Corridors"] + sorted(dfp["corridor"].dropna().unique().tolist()) \
+        #     if "corridor" in dfp.columns else ["All Corridors"]
+        # st.selectbox("Corridor (global)", corridor_options, key="local_corridor")
+        # _sync_corridor()
+
+        # Tab-specific filters (formerly horizontal)
         selected_actions = st.multiselect(
-            "Filter by recommended action",
+            "Recommended action",
             options=all_actions,
             default=all_actions,
+            key="presc_actions"
         )
-    with cB:
-        top_n = st.slider("Top N locations", min_value=10, max_value=300, value=50, step=10)
+        top_n = st.slider("Top N locations", min_value=10, max_value=300, value=50, step=10, key="presc_topn")
 
-    dfp_f = dfp[dfp["best_action"].isin(selected_actions)].copy()
+        with st.expander("More filters"):
+            # Add any advanced controls here (examples; only render if columns exist)
+            if "severity" in dfp.columns:
+                _sevs = sorted(dfp["severity"].dropna().unique().tolist())
+                st.multiselect("Severity", _sevs, key="presc_severity")
+            if "district" in dfp.columns:
+                _dists = sorted(dfp["district"].dropna().unique().tolist())
+                st.multiselect("District", _dists, key="presc_district")
+
+        st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Compute filtered frame from left panel selections
+    dfp_f = dfp[dfp["best_action"].isin(st.session_state.get("presc_actions", all_actions))].copy()
+    if "presc_severity" in st.session_state and st.session_state["presc_severity"]:
+        if "severity" in dfp_f.columns:
+            dfp_f = dfp_f[dfp_f["severity"].isin(st.session_state["presc_severity"])]
+    if "presc_district" in st.session_state and st.session_state["presc_district"]:
+        if "district" in dfp_f.columns:
+            dfp_f = dfp_f[dfp_f["district"].isin(st.session_state["presc_district"])]
 
     if dfp_f.empty:
-        st.warning("No data matches your action filters. Select more actions.")
+        st.warning("No data matches your filters. Select more options.")
         st.stop()
 
-    df_topn = dfp_f.sort_values("expected_reduction_amount", ascending=False).head(top_n)
+    df_topn = dfp_f.sort_values("expected_reduction_amount", ascending=False).head(st.session_state["presc_topn"])
 
-    # KPI row
-    kpi_row(df_topn)
-    st.divider()
+    # --- RIGHT: KPI column + the rest of the content ---
+    with colR:
+        # KPI stack (vertical)
+        # If you already have kpi_row(), you can keep it;
+        # below shows 'card' style aligned to right column width.
+        kpi_data = kpi_row(df_topn, return_data=True) if "kpi_row" in globals() else None
+        # If your kpi_row doesn't support return_data, you can use your function directly here
+        # and/or replace with the following manual cards:
 
-    # Map
-    st.subheader(f"Impact map (Top {top_n} | color = action)")
-    build_map(dfp_f, top_n=top_n, all_actions=all_actions)
-    st.divider()
+        # Example: manual KPI cards (replace with your real KPI calcs if needed)
+        # Each KPI block
+        def _kpi_card(title, value, foot=None):
+            st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+            st.markdown(f'<div class="kpi-title">{title}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="kpi-value">{value}</div>', unsafe_allow_html=True)
+            if foot:
+                st.markdown(f'<div class="kpi-foot">{foot}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
-    # Portfolio summary
-    st.subheader("Action portfolio summary")
-    action_bars(dfp_f)
-    st.divider()
+        # If your existing kpi_row() already draws 3 KPIs horizontally, you could:
+        # - leave it as-is (it will render in this right column and still look fine), or
+        # - comment it out and use _kpi_card() calls for a vertical stack instead.
+        #
+        # Example vertical KPIs (replace with your numbers):
+        # _kpi_card("Total Expected Reduction", f"{df_topn['expected_reduction_amount'].sum():,.0f}")
+        # _kpi_card("Median % Reduction", f"{df_topn['pct_reduction'].median():.1%}" if 'pct_reduction' in df_topn.columns else "—")
+        # _kpi_card("Locations in Scope", f"{len(df_topn):,}")
 
-    # Ranked table + details
-    ranked_table_and_details(dfp_f, top_n=top_n)
+        # Divider before visuals
+        st.divider()
 
-    with st.expander("Notes & tips"):
-        st.markdown(
-            """
-            **Map encoding**
-            - **Color**: `best_action`
+        # Map
+        st.subheader(f"Impact map (Top {st.session_state['presc_topn']} | color = action)")
+        build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
+        st.divider()
 
-            **Percent normalization**
-            - If `pct_reduction` is 0–100, it is converted to 0–1 automatically.
-            - If it's already 0–1, it stays as-is.
-            """
-        )
+        # Portfolio summary
+        st.subheader("Action portfolio summary")
+        action_bars(dfp_f)
+        st.divider()
+
+        # Ranked table + details
+        ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
+
+        with st.expander("Notes & tips"):
+            st.markdown(
+                """
+                **Map encoding**
+                - **Color**: `best_action`
+
+                **Percent normalization**
+                - If `pct_reduction` is 0–100, it is converted to 0–1 automatically.
+                - If it's already 0–1, it stays as-is.
+                """
+            )
