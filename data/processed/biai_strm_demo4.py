@@ -508,7 +508,7 @@ with tab1:
     with shap_output:
         st.subheader("Top Predictors of Estimated Cost")
         st.image("data/processed/BI to AI SHAP vf.png", width=800)
-        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. The most important features for predicting estimated cost were pedestrian involved, motorcycle involved, and On TxDOT highway system. ")
+        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. The most important features for predicting estimated cost were pedestrian involved, motorcycle involved, and crash speed limit.")
     
     with historicaloverview:
         st.subheader("Historical Trends")
