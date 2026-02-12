@@ -29,7 +29,7 @@ CSV_FILENAME1 = "atx_crash_data_2018-2026_clean.csv"
 CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 
 CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
-CSV_PATH2 = f"{DATA_DIR}/{CSV_FILENAME2}"
+CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 
 MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
 
