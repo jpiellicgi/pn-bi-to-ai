@@ -756,9 +756,9 @@ with tab6:
       }
 
       .presc-top .kpi-value {
-        font-weight: 600;
-        font-size: 1.3rem;
-        line-height: 1.2;
+        font-weight: 800;
+        font-size: 1.65rem;
+        line-height: 1.15;
         margin: 0 0 0.1rem 0;
       }
 
