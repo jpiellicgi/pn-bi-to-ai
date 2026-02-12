@@ -6,8 +6,10 @@ from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 import streamlit as st
+from streamlit.components.v1 import html
 import plotly.express as px
-import pydeck as pdk
+import plotly.graph_objects as go
+# import pydeck as pdk
 import altair as alt
 import requests
 
@@ -25,13 +27,13 @@ alt.data_transformers.disable_max_rows()
 DATA_DIR = "https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed"
 LOCAL_DATA_DIR = 'data/processed'
 
-CSV_FILENAME1 = "atx_crash_data_2018-2026_cleansed-death count.csv"
+CSV_FILENAME1 = "atx_crash_data_2018-2026_clean.csv"
 CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 
 CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
-CSV_PATH2 = f"{DATA_DIR}/{CSV_FILENAME2}"
+CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 
-MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
+# MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
 
 
 # --- 3. SMART ASSET LOADER (NOTE: glob works for local files, not URLs) ---
@@ -170,7 +172,8 @@ def normalize_pct_reduction(series: pd.Series) -> pd.Series:
 def make_location_id(df: pd.DataFrame) -> pd.Series:
     lat = df["latitude"].round(5).astype(str)
     lon = df["longitude"].round(5).astype(str)
-    return "loc_" + lat + "_" + lon + "_i" + df.index.astype(str)
+    # return "loc_" + lat + "_" + lon + "_i" + df.index.astype(str)
+    return lat + ", " + lon
 
 
 def action_color_map(actions) -> Dict[str, Tuple[int, int, int]]:
@@ -261,65 +264,196 @@ def kpi_row(df: pd.DataFrame):
     c3.metric("Most recommended action", top_action)
 
 
-def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
-    df = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+# def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
+#     df = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
 
-    cmap = action_color_map(all_actions)
-    df["color"] = df["best_action"].map(lambda x: list(cmap.get(x, (120, 120, 120))))
+    
+#     ACTION_COLORS_RGB = {
+#             "reduce_speed_limit":   (227, 25, 55),
+#             "increase_enforcement":      (82, 54, 171),
+#             "improve_crosswalks":  (110, 63, 237),
+#             "micromobility_zone_controls":    (255, 115, 98),
+#             "work_zone_controls":   (203, 195, 230),
+#             "add_speed_bumps":    (168, 36, 101)
+#         }
 
+#     cmap = action_color_map(all_actions)
+#     df["color"] = df["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
+
+#     df["pct_reduction_display"] = (df["pct_reduction_norm"] * 100).round(1).astype(str) + "%"
+#     df["pred_est_ttl_comp_cost_display"] = df["pred_est_ttl_comp_cost"].map(fmt_dollars)
+#     df["expected_reduction_amount_display"] = df["expected_reduction_amount"].map(fmt_dollars)
+#     df["expected_cost_after_action_display"] = df["expected_cost_after_action"].map(fmt_dollars)
+
+#     center_lat = float(df["latitude"].mean()) if len(df) else 30.2672
+#     center_lon = float(df["longitude"].mean()) if len(df) else -97.7431
+
+#     view_state = pdk.ViewState(latitude=center_lat, longitude=center_lon, zoom=10 if len(df) else 4, pitch=0)
+
+#     layer = pdk.Layer(
+#         "ScatterplotLayer",
+#         data=df,
+#         get_position="[longitude, latitude]",
+#         get_fill_color="color",
+#         get_radius="point_size",
+#         radius_scale=1,
+#         radius_min_pixels=2,
+#         radius_max_pixels=80,
+#         pickable=True,
+#         opacity=0.75,
+#         stroked=True,
+#         get_line_color=[20, 20, 20],
+#         line_width_min_pixels=1,
+#     )
+
+#     tooltip = {
+#         "html": """
+#         <div style="max-width: 360px;">
+#           <div><b>Address</b>: {address_short}</div>
+#           <div><b>Location</b>: {location_id}</div>
+#           <div><b>Action</b>: {best_action}</div>
+#           <div><b>Risk score</b>: {pred_est_ttl_comp_cost_display}</div>
+#           <div><b>Expected reduction</b>: {expected_reduction_amount_display}</div>
+#           <div><b>% reduction</b>: {pct_reduction_display}</div>
+#           <div><b>Cost after action</b>: {expected_cost_after_action_display}</div>
+#           <hr style="margin:6px 0;" />
+#           <div><b>Rationale</b>: {ai_rationale_short}</div>
+#         </div>
+#         """,
+#         "style": {"backgroundColor": "rgba(25, 25, 25, 0.92)", "color": "white"},
+#     }
+
+#     deck = pdk.Deck(
+#         layers=[layer],
+#         initial_view_state=view_state,
+#         tooltip=tooltip,
+#         map_style="mapbox://styles/mapbox/streets-v12",
+#         api_keys={"mapbox": MAPBOX_TOKEN},
+#         map_provider="mapbox",
+#     )
+
+#     st.pydeck_chart(deck, use_container_width=True)
+
+def build_map(df_in: pd.DataFrame, top_n: int, all_actions: list):
+    # Defensive: ensure we actually got a DataFrame
+    if not isinstance(df_in, pd.DataFrame):
+        raise TypeError(f"build_map(df_in=...) expected a pandas DataFrame, got {type(df_in)}")
+
+    # Work on a copy with top-N
+    df = (
+        df_in.sort_values("expected_reduction_amount", ascending=False)
+             .head(top_n)
+             .copy()
+    )
+
+    # ---- Your action -> RGB mapping (as provided) ----
+    ACTION_COLORS_RGB = {
+        "reduce_speed_limit":          (227, 25, 55),
+        "increase_enforcement":        (82, 54, 171),
+        "improve_crosswalks":          (110, 63, 237),
+        "micromobility_zone_controls": (255, 115, 98),
+        "work_zone_controls":          (203, 195, 230),
+        "add_speed_bumps":             (168, 36, 101),
+    }
+
+    # Convert RGB tuples to HEX strings for Plotly
+    def rgb_to_hex(rgb_tuple):
+        r, g, b = rgb_tuple
+        return f"#{r:02X}{g:02X}{b:02X}"
+
+    action_to_hex_full = {k: rgb_to_hex(v) for k, v in ACTION_COLORS_RGB.items()}
+    DEFAULT_HEX = "#787878"
+
+    # Plotly expects a dict of category->hex. Build it only for categories present to avoid warnings.
+    present_actions = sorted(df["best_action"].dropna().unique().tolist())
+    color_map_present = {a: action_to_hex_full.get(a, DEFAULT_HEX) for a in present_actions}
+
+    # Display columns (reuse your formatting helpers)
     df["pct_reduction_display"] = (df["pct_reduction_norm"] * 100).round(1).astype(str) + "%"
     df["pred_est_ttl_comp_cost_display"] = df["pred_est_ttl_comp_cost"].map(fmt_dollars)
     df["expected_reduction_amount_display"] = df["expected_reduction_amount"].map(fmt_dollars)
     df["expected_cost_after_action_display"] = df["expected_cost_after_action"].map(fmt_dollars)
 
+    # Center and zoom
     center_lat = float(df["latitude"].mean()) if len(df) else 30.2672
     center_lon = float(df["longitude"].mean()) if len(df) else -97.7431
+    zoom = 10 if len(df) else 4
 
-    view_state = pdk.ViewState(latitude=center_lat, longitude=center_lon, zoom=10 if len(df) else 4, pitch=0)
+    # If you have a 'point_size' column, use it; otherwise keep uniform markers
+    size_col = "point_size" if "point_size" in df.columns else None
 
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=df,
-        get_position="[longitude, latitude]",
-        get_fill_color="color",
-        get_radius="point_size",
-        radius_scale=1,
-        radius_min_pixels=2,
-        radius_max_pixels=80,
-        pickable=True,
-        opacity=0.75,
-        stroked=True,
-        get_line_color=[20, 20, 20],
-        line_width_min_pixels=1,
+    # Build the figure
+    fig = px.scatter_mapbox(
+        df,
+        lat="latitude",
+        lon="longitude",
+        color="best_action",
+        size=size_col,
+        size_max=20,                               # tune as desired
+        color_discrete_map=color_map_present,      # dict, not lambda
+        hover_name=None,
+        hover_data=None,
+        zoom=zoom,
+        height=520,
     )
 
-    tooltip = {
-        "html": """
-        <div style="max-width: 360px;">
-          <div><b>Address</b>: {address_short}</div>
-          <div><b>Location</b>: {location_id}</div>
-          <div><b>Action</b>: {best_action}</div>
-          <div><b>Risk score</b>: {pred_est_ttl_comp_cost_display}</div>
-          <div><b>Expected reduction</b>: {expected_reduction_amount_display}</div>
-          <div><b>% reduction</b>: {pct_reduction_display}</div>
-          <div><b>Cost after action</b>: {expected_cost_after_action_display}</div>
-          <hr style="margin:6px 0;" />
-          <div><b>Rationale</b>: {ai_rationale_short}</div>
-        </div>
-        """,
-        "style": {"backgroundColor": "rgba(25, 25, 25, 0.92)", "color": "white"},
-    }
-
-    deck = pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip=tooltip,
-        map_style="mapbox://styles/mapbox/streets-v12",
-        api_keys={"mapbox": MAPBOX_TOKEN},
-        map_provider="mapbox",
+    # OpenStreetMap tiles (free, no token)
+    fig.update_layout(
+        mapbox_style="open-street-map",
+        mapbox_center={"lat": center_lat, "lon": center_lon},
+        margin=dict(l=0, r=0, t=40, b=0),
+        title={"text": "Locations by Action", "x": 0.02, "xanchor": "left"},
+        legend_title_text="Best action",
     )
 
-    st.pydeck_chart(deck, use_container_width=True)
+    # If you didn’t use a size column, set a default marker size
+    if size_col is None:
+        fig.update_traces(marker={"size": 10})
+
+    # Stroke & opacity similar to your pydeck style
+    fig.update_traces(
+        marker=dict(
+            opacity=0.85,
+            line=dict(width=1, color="rgba(20,20,20,0.9)"),
+        )
+    )
+
+    # Hovertemplate (matches your pydeck tooltip content/order)
+    hovertemplate = (
+        "<b>Address</b>: %{customdata[0]}<br>"
+        "<b>Location</b>: %{customdata[1]}<br>"
+        "<b>Action</b>: %{customdata[2]}<br>"
+        "<b>Risk score</b>: %{customdata[3]}<br>"
+        "<b>Expected reduction</b>: %{customdata[4]}<br>"
+        "<b>% reduction</b>: %{customdata[5]}<br>"
+        "<b>Cost after action</b>: %{customdata[6]}<br>"
+        "<hr style='margin:6px 0;'/>"
+        "<b>Rationale</b>: %{customdata[7]}<extra></extra>"
+    )
+
+    # Ensure columns exist; if not, create empty strings to avoid KeyErrors
+    customdata_cols = [
+        "address_short",
+        "location_id",
+        "best_action",
+        "pred_est_ttl_comp_cost_display",
+        "expected_reduction_amount_display",
+        "pct_reduction_display",
+        "expected_cost_after_action_display",
+        "ai_rationale_short",
+    ]
+    for c in customdata_cols:
+        if c not in df.columns:
+            df[c] = ""
+
+    fig.update_traces(
+        customdata=df[customdata_cols].values,
+        hovertemplate=hovertemplate,
+        hoverinfo="skip",  # rely entirely on hovertemplate
+    )
+
+    # Render in Streamlit
+    st.plotly_chart(fig, use_container_width=True)
     
 def action_bars(df: pd.DataFrame):
     df_plot = df[df["best_action"].ne("no_change")].copy()
@@ -333,7 +467,7 @@ def action_bars(df: pd.DataFrame):
     # --- Chart 1: Total reduction ---
     bar1 = (
         alt.Chart(agg)
-        .mark_bar()
+        .mark_bar(color="#5236ab")
         .encode(
             x=alt.X(
                 "best_action:N",
@@ -361,7 +495,7 @@ def action_bars(df: pd.DataFrame):
     # --- Chart 2: Locations ---
     bar2 = (
         alt.Chart(agg)
-        .mark_bar()
+        .mark_bar(color="#5236ab")
         .encode(
             x=alt.X(
                 "best_action:N",
@@ -462,16 +596,15 @@ except Exception as e:
 with st.sidebar:
     if LOGO_PATH:
         st.image(LOGO_PATH, use_container_width=True)
-    st.title("Strategic Filters")
+    st.title("Global Filters")
 
     all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
     selected_years = st.multiselect("📅 Fiscal Years:", all_years, default=all_years[-4:])
 
     top_10_names = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
 
-    st.subheader("📍 Target Selection")
     corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
-    selected_street = st.selectbox("Select a Corridor to Focus Analysis:", corridor_options)
+    selected_street = st.selectbox("📍 Corridor:", corridor_options)
 
 
 # --- 6. APPLY FILTERS ---
@@ -488,11 +621,10 @@ else:
 st.title("Safety Intelligence Dashboard")
 st.caption(f"Currently Analyzing: **{current_focus}**")
 
-k1, k2, k3, k4 = st.columns(4)
+k1, k2, k3 = st.columns(3)
 k1.metric("Crash Volume", f"{len(df):,}")
 k2.metric("Lives Lost", int(df["death_cnt"].sum()))
-k3.metric("Avg Speed Limit", f"{df['crash_speed_limit'].mean():.1f} MPH")
-k4.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
+k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 
 st.markdown("---")
 
@@ -508,8 +640,8 @@ with tab1:
     shap_output, historicaloverview = st.columns([1, 2], gap="large")
     with shap_output:
         st.subheader("Top Predictors of Estimated Cost")
-        st.image("data/processed/BI to AI SHAP.png", width=800)
-        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. The most important features for predicting estimated cost were pedestrian involved, motorcycle involved, and On TxDOT highway system. ")
+        st.image("data/processed/BI to AI SHAP vf.png", width=800)
+        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. The most important features for predicting estimated cost were pedestrian involved, motorcycle involved, and crash speed limit.")
     
     with historicaloverview:
         st.subheader("Historical Trends")
@@ -584,22 +716,59 @@ with tab2:
 # --- TAB 3 ---
 with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
-    r1c1, r1c2= st.columns(2) #removed r1c3 for testing
+    r1c1, r1c2, r1c3 = st.columns(3) #removed r1c1 for testing
+    # with r1c1:
+    #     hr_vol = df.groupby("HOUR").size().reset_index(name="Volume")
+    #     st.plotly_chart(
+    #         px.line(hr_vol, x="HOUR", y="Volume", markers=True, color_discrete_sequence=["#6A0DAD"]),
+    #         use_container_width=True,
+    #     )
     with r1c1:
-        hr_vol = df.groupby("HOUR").size().reset_index(name="Volume")
-        st.plotly_chart(
-            px.line(hr_vol, x="HOUR", y="Volume", markers=True, color_discrete_sequence=["#6A0DAD"]),
-            use_container_width=True,
-        )
-    with r1c2:
-        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r)
+        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r, title='Accident Severity Breakdown')
+        fig_pie.update_layout(
+            height=450, 
+            width=500,
+            legend=dict(
+                x=0.85,          # Pulls legend closer to the center
+                #xanchor="left",
+                #yanchor="middle",
+                y=0.5
+                )   
+            )
         st.plotly_chart(fig_pie, use_container_width=True)
     
-    # with r1c3: #EW added but causing issues
-    #     df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"])["ID"].count().reset_index()
-    #     df_speed_severity.columns = ["Speed_Bin", "Severity_Label", "Number of Acccidents"]
-    #     fig_speed_severity= st.bar_chart(df_speed_severity, x="Speed_Bin", y="Number of Acccidents", color="Severity_Label")
-    #     st.plotly_chart(fig_speed_severity)
+    with r1c2:
+        #Accidents by Speed Limit and Severity
+        df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"]).size().reset_index(name="Accident_Count")
+        #df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"])["ID"].count().reset_index(name="Accident_Count")
+        fig_bar = px.bar(
+            df_speed_severity,
+            x="Speed_Bin",
+            y="Accident_Count",
+            color="Severity_Label",
+            title="Accidents by Speed Limit and Severity",
+            labels={"Accident_Count": "Number of Accidents", "Speed_Bin": "Speed Limit (mph)", "Severity_Label": "Severity Label"},
+            # This ensures the bars are stacked rather than grouped
+            barmode="stack",
+            # Optional: Define a specific order for the severity levels in the legend
+            category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+            color_discrete_sequence=px.colors.sequential.Purples_r
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    with r1c3:
+        #Average cost by speed bin
+        df_avg_cost_speed= df.groupby("Speed_Bin")["Estimated Total Comprehensive Cost"].mean().reset_index()
+        fig_avg_cost_speed= px.bar(df_avg_cost_speed, x="Speed_Bin", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
+            title= "Average Estimated Cost by Speed Bin",labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"},                            
+            color_continuous_scale="Purples", text_auto=".2s")
+        # fig_avg_cost_speed.update_layout(
+        #     height=300, 
+        #     width=400,
+        #     margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+        #     )
+        st.plotly_chart(fig_avg_cost_speed)
+
 
 # --- TAB 4 ---
 with tab4:    
@@ -609,20 +778,47 @@ with tab4:
         x="HOUR",
         y="DAY_NAME",
         z="Count",
+        title= "Number of Accidents by Day and Hour",
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
     st.plotly_chart(fig_heat, use_container_width=True)
 
-    df_hour_severity= df.groupby(["Hour", "Severity_Label"])["ID"].count().reset_index()
-    df_hour_severity.columns = ["Hour", "Severity_Label", "Number of Acccidents"]
-    fig_hour_severity= st.bar_chart(df_hour_severity, x="Hour", y="Number of Acccidents", color="Severity_Label")
-    st.plotly_chart(fig_hour_severity, use_container_width=True)
+    #Average cost by speed bin
+    df_avg_cost_hour= df.groupby("HOUR")["Estimated Total Comprehensive Cost"].mean().reset_index()
+    fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
+        title= "Average Estimated Cost by Hour",                            
+        color_continuous_scale="Purples", text_auto=".2s")
+    # fig_avg_cost_speed.update_layout(
+    #     height=300, 
+    #     width=400,
+    #     margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+    #     )
+    st.plotly_chart(fig_avg_cost_hour)
+
+    #Severity Breakdown by Hour
+    df_hour_severity= df.groupby(["HOUR", "Severity_Label"]).size().reset_index(name="Accident_Count")
+    fig_bar = px.bar(
+        df_hour_severity,
+        x="HOUR",
+        y="Accident_Count",
+        color="Severity_Label",
+        title="Number of Accidents by Hour and Severity",
+        labels={"Accident_Count": "Number of Accidents", "Severity_Label": "Severity Label"},
+        # This ensures the bars are stacked rather than grouped
+        barmode="stack",
+        # Optional: Define a specific order for the severity levels in the legend
+        category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+        color_discrete_sequence=px.colors.sequential.Purples_r
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
 
 
 # --- TAB 5 ---
 with tab5:
     st.subheader("Economic Impact by Transportation Type")
+    st.write("##### This page shows the cost of accidents in which a pedestrian, bicycle, or motorcycle were involved.")
+    st.markdown("<br>", unsafe_allow_html=True)
 
     modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", "Commercial Veh"]
     mode_stats = []
@@ -661,71 +857,277 @@ with tab5:
 
 # --- ✅ TAB 6 (YOUR PRESCRIPTIVE ACTIONS) ---
 with tab6:
+
+    # ---------- Local scoped CSS for tidy spacing ----------
+    top_css = """
+    <style>
+      .presc-top h3,
+      .presc-top p {
+        margin-top: 0.15rem !important;
+        margin-bottom: 0.35rem !important;
+      }
+
+      .presc-top .left-panel {
+        border: 1px solid rgba(49,51,63,0.12);
+        border-radius: 10px;
+        padding: 0.6rem 0.75rem;
+        background: var(--secondary-background-color);
+      }
+
+      .presc-top .kpi-card {
+        border: 1px solid rgba(49,51,63,0.12);
+        border-radius: 10px;
+        padding: 0.75rem 0.9rem;
+        background: var(--background-color);
+        margin-bottom: 0.4rem;
+      }
+
+      .presc-top .kpi-title {
+        font-size: 0.85rem;
+        color: var(--secondary-text-color);
+        margin: 0 0 0.15rem 0;
+      }
+
+      .presc-top .kpi-value {
+        font-weight: 600;
+        font-size: 32px !important;
+        line-height: 1.1;
+        margin: 0 0 0.1rem 0;
+      }
+
+      .presc-top .kpi-foot {
+        color: var(--secondary-text-color);
+        font-size: 0.8rem;
+        margin: 0;
+      }
+
+      @media (min-width: 768px) {
+        .presc-top .sticky-col {
+          position: sticky;
+          top: 3.5rem;
+        }
+      }
+    </style>
+    """
+
+    st.markdown(top_css, unsafe_allow_html=True)
+    st.markdown('<div class="presc-top">', unsafe_allow_html=True)
+
+    # ---------- Title ----------
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
 
+    # ---------- Data prep ----------
     if df_prescriptive_raw is None:
         st.error(f"Prescriptive dataset failed to load: {prescriptive_load_error}")
+        st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
-    # Prepare + validate
     try:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
     except Exception as e:
         st.error(f"Prescriptive data validation error: {e}")
         st.write("Columns found:", list(df_prescriptive_raw.columns))
+        st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
-    # Drop no_change by default
+    # Remove "no-change"
     dfp = dfp[dfp["best_action"] != "no_change"].copy()
 
-    # Optional alignment with partner corridor selection:
-    # If user picked a specific corridor, filter addresses containing that corridor name.
+    # Apply global corridor if selected
     if selected_street not in ["All Corridors", "--- Full Street List ---"]:
         dfp = dfp[dfp["address"].str.contains(selected_street, case=False, na=False)].copy()
 
     if dfp.empty:
-        st.warning("No prescriptive records match the current corridor selection. Try 'All Corridors'.")
+        st.warning("No prescriptive records match the current corridor selection.")
+        st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
     all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
 
-    # Controls inside the tab (so we don't fight the shared sidebar)
-    cA, cB = st.columns([2, 1])
-    with cA:
+    # ======================================================
+    # TOP LAYOUT: Filters (Left) + KPIs (Right)
+    # ======================================================
+    colL, colR = st.columns([3, 2], gap="small")
+
+    # ---------- LEFT FILTER PANEL ----------
+    with colL:
+        st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
+
         selected_actions = st.multiselect(
-            "Filter by recommended action",
+            "Recommended action",
             options=all_actions,
             default=all_actions,
+            key="presc_actions"
         )
-    with cB:
-        top_n = st.slider("Top N locations", min_value=10, max_value=300, value=50, step=10)
 
-    dfp_f = dfp[dfp["best_action"].isin(selected_actions)].copy()
+        top_n = st.slider(
+            "Top N locations",
+            min_value=10,
+            max_value=300,
+            value=50,
+            step=10,
+            key="presc_topn"
+        )
+
+        # Advanced filters
+        with st.expander("More filters"):
+            if "severity" in dfp.columns:
+                sevs = sorted(dfp["severity"].dropna().unique().tolist())
+                st.multiselect("Severity", sevs, key="presc_severity")
+
+            if "district" in dfp.columns:
+                dists = sorted(dfp["district"].dropna().unique().tolist())
+                st.multiselect("District", dists, key="presc_district")
+
+        st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ---------- Apply filters to data ----------
+    dfp_f = dfp[dfp["best_action"].isin(st.session_state.get("presc_actions", all_actions))].copy()
+
+    if st.session_state.get("presc_severity"):
+        if "severity" in dfp_f.columns:
+            dfp_f = dfp_f[dfp_f["severity"].isin(st.session_state["presc_severity"])]
+
+    if st.session_state.get("presc_district"):
+        if "district" in dfp_f.columns:
+            dfp_f = dfp_f[dfp_f["district"].isin(st.session_state["presc_district"])]
 
     if dfp_f.empty:
-        st.warning("No data matches your action filters. Select more actions.")
+        st.warning("No data matches your filters. Select more options.")
+        st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
-    df_topn = dfp_f.sort_values("expected_reduction_amount", ascending=False).head(top_n)
+    df_topn = (
+        dfp_f.sort_values("expected_reduction_amount", ascending=False)
+        .head(st.session_state["presc_topn"])
+    )
 
-    # KPI row
-    kpi_row(df_topn)
+    # ---------- RIGHT KPI STACK ----------
+    with colR:
+
+        def _kpi_card(title, value, foot=None, *, size_rem=2.2, gap_px=4, height_px=100):
+            """
+            Renders a compact KPI card with explicit font family and minimal spacing.
+        
+            Args:
+                title (str): KPI title (small, subtle)
+                value (str): KPI value (big, bold)
+                foot (str|None): Optional footnote/delta
+                size_rem (float): Font size for value (in rem). Try 1.9–2.6
+                gap_px (int): Space below the outer card (px). Use 0–8
+                height_px (int): Iframe height. Lower = less whitespace. Try 90–120
+            """
+            html(f"""
+                <html>
+                    <head>
+                        <style>
+                            /* Reset iframe defaults to eliminate unexpected gaps */
+                            html, body {{
+                                padding: 0;
+                                margin: 0;
+                            }}
+        
+                            /* Match Streamlit's default font stack */
+                            .kpi-root * {{
+                                font-family:
+                                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+                                    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+                                color: var(--text-color);
+                            }}
+        
+                            .kpi-card {{
+                                border: 1px solid rgba(49,51,63,0.12);
+                                border-radius: 10px;
+                                padding: 10px 12px;      /* compact inner padding */
+                                margin: 0 0 {gap_px}px 0; /* control space between cards */
+                                background: var(--background-color);
+                            }}
+        
+                            .kpi-title {{
+                                font-size: 0.9rem;
+                                color: var(--secondary-text-color);
+                                margin: 0 0 4px 0;       /* tight spacing above the value */
+                                font-weight: 400;
+                            }}
+        
+                            .kpi-value {{
+                                font-size: {size_rem}rem; /* BIG, TUNABLE */
+                                font-weight: 600;         /* max bold */
+                                line-height: 1.1;
+                                margin: 0 0 2px 0;       /* tighten space above footnote */
+                                color: var(--text-color);
+                            }}
+        
+                            .kpi-foot {{
+                                font-size: 0.8rem;
+                                color: var(--secondary-text-color);
+                                margin: 0;
+                                font-weight: 400;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="kpi-root">
+                            <div class="kpi-card">
+                                <div class="kpi-title">{title}</div>
+                                <div class="kpi-value">{value}</div>
+                                {f'<div class="kpi-foot">{foot}</div>' if foot else ''}
+                            </div>
+                        </div>
+                    </body>
+                </html>
+            """, height=height_px)
+
+        # KPI 1 — total expected reduction
+        total_reduction = float(df_topn["expected_reduction_amount"].sum())
+
+        # KPI 2 — median pct reduction
+        if "pct_reduction" in df_topn.columns:
+            pct_series = df_topn["pct_reduction"]
+            if pct_series.max() > 1.0:
+                pct_series = pct_series / 100.0
+            median_pct_display = f"{float(pct_series.median()):.1%}"
+        else:
+            median_pct_display = "—"
+
+        # KPI 3 — number of top-N locations
+        locations_display = f"{len(df_topn):,}"
+
+        # Render KPI cards
+        # _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}")
+        # _kpi_card("Median % Reduction", median_pct_display)
+        # _kpi_card("Locations in Scope", locations_display)
+
+        _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}", size_rem=2.1, gap_px=4, height_px=95)
+        _kpi_card("Median % Reduction", median_pct_display, size_rem=2.0, gap_px=4, height_px=95)
+        _kpi_card("Locations in Scope", locations_display, size_rem=2.0, gap_px=4, height_px=95)
+
+    # Close the top wrapper
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ======================================================
+    # FULL-WIDTH CONTENT
+    # ======================================================
     st.divider()
 
     # Map
-    st.subheader(f"Impact map (Top {top_n} | color = action)")
-    build_map(dfp_f, top_n=top_n, all_actions=all_actions)
+    st.subheader(f"Impact map (Top {st.session_state['presc_topn']} | color = action)")
+    build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
+
     st.divider()
 
     # Portfolio summary
-    st.subheader("Action portfolio summary")
     action_bars(dfp_f)
+
     st.divider()
 
-    # Ranked table + details
-    ranked_table_and_details(dfp_f, top_n=top_n)
+    # Table + detail view
+    ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
 
+    # Notes
     with st.expander("Notes & tips"):
         st.markdown(
             """
