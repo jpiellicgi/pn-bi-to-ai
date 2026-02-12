@@ -59,18 +59,11 @@ def get_cgi_logo():
 
 LOGO_PATH = get_cgi_logo()
 
-# Render logo at the very top of the main area
-if LOGO_PATH:
-    st.image(LOGO_PATH, width=180)
-
 # ----------------------------
 # Shared: Safe remote CSV loader
 # ----------------------------
 @st.cache_data(show_spinner=False)
 def read_csv_url(url: str) -> pd.DataFrame:
-    """
-    Robustly fetch CSV from a URL and fail clearly if empty.
-    """
     r = requests.get(url, timeout=60)
     if r.status_code != 200:
         raise FileNotFoundError(f"HTTP {r.status_code} fetching {url}")
@@ -83,9 +76,6 @@ def read_csv_url(url: str) -> pd.DataFrame:
 # ----------------------------
 @st.cache_data(show_spinner=False)
 def load_partner_data(url: str) -> pd.DataFrame:
-    """
-    Standardizes crash data, mappings, and involvement flags.
-    """
     try:
         df = read_csv_url(url)
     except Exception:
@@ -100,7 +90,7 @@ def load_partner_data(url: str) -> pd.DataFrame:
     sev_map = {1: "Fatal", 2: "Serious Injury", 3: "Minor Injury", 4: "Possible Injury", 0: "No Injury", 5: "Unknown"}
     df["Severity_Label"] = df["crash_sev_id"].map(sev_map)
 
-    cols_to_fix = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost"]
+    cols_to_fix = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost", "death_cnt"]
     for col in cols_to_fix:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
@@ -132,12 +122,7 @@ def load_partner_data(url: str) -> pd.DataFrame:
 # ----------------------------
 # Prescriptive Tab Helpers
 # ----------------------------
-# (Defining a simple kpi_row since it was called but not defined in the snippet)
-def kpi_row(dfp):
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total Reduction", fmt_dollars(dfp["expected_reduction_amount"].sum()))
-    c2.metric("Avg % Reduction", f"{(dfp['pct_reduction_norm'].mean()*100):.1f}%")
-    c3.metric("Locations", len(dfp))
+REQUIRED_COLS = ["latitude", "longitude", "Address", "pred_est_ttl_comp_cost", "best_action", "expected_cost_after_action", "expected_reduction_amount", "pct_reduction", "ai_rationale"]
 
 def _coerce_numeric(df, cols):
     out = df.copy()
@@ -156,16 +141,19 @@ def make_location_id(df):
     return df["latitude"].round(5).astype(str) + ", " + df["longitude"].round(5).astype(str)
 
 def compact_text(s, n=140):
+    if s is None or (isinstance(s, float) and math.isnan(s)): return ""
     s = str(s).strip()
     return s[:n-1] + "…" if len(s) > n else s
 
 def fmt_dollars(x):
-    return f"${float(x):,.0f}" if pd.notnull(x) else "—"
+    try:
+        return f"${float(x):,.0f}" if pd.notnull(x) else "—"
+    except: return "—"
 
 @st.cache_data(show_spinner=False)
 def prepare_prescriptive_df(df_prescriptive):
     df = df_prescriptive.copy()
-    df = _coerce_numeric(df, ["latitude", "longitude", "pred_est_ttl_comp_cost", "expected_reduction_amount", "pct_reduction"])
+    df = _coerce_numeric(df, ["latitude", "longitude", "pred_est_ttl_comp_cost", "expected_cost_after_action", "expected_reduction_amount", "pct_reduction"])
     df = df.dropna(subset=["latitude", "longitude"]).copy()
     df["pct_reduction_norm"] = normalize_pct_reduction(df["pct_reduction"])
     df["location_id"] = make_location_id(df)
@@ -175,7 +163,7 @@ def prepare_prescriptive_df(df_prescriptive):
 
 def build_map(df, top_n, all_actions):
     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-    ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237)}
+    ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}
     df_map["color"] = df_map["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
     st.pydeck_chart(pdk.Deck(
         layers=[pdk.Layer("ScatterplotLayer", data=df_map, get_position="[longitude, latitude]", get_fill_color="color", get_radius=100, pickable=True)],
@@ -196,16 +184,19 @@ def ranked_table_and_details(df, top_n):
 # ----------------------------
 # Execution & UI
 # ----------------------------
-df_raw1 = load_partner_data(CSV_PATH1)
+try:
+    df_raw1 = load_partner_data(CSV_PATH1)
+except Exception as e:
+    st.error(f"Crash dataset load failed: {e}")
+    st.stop()
+
 try:
     df_prescriptive_raw = read_csv_url(CSV_PATH2)
-except Exception:
+except Exception as e:
     df_prescriptive_raw = None
 
-# --- SIDEBAR ---
+# --- SIDEBAR (Logo Removed from here) ---
 with st.sidebar:
-    if LOGO_PATH: 
-        st.image(LOGO_PATH, use_container_width=True)
     st.title("Global Filters")
     all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
     selected_years = st.multiselect("📅 Fiscal Years:", all_years, default=all_years[-4:])
@@ -217,39 +208,54 @@ df = df_raw1[df_raw1["Year"].isin(selected_years)]
 if selected_street != "All Corridors":
     df = df[df["rpt_street_name"] == selected_street]
 
+# --- MAIN DASHBOARD AREA ---
+if LOGO_PATH:
+    st.image(LOGO_PATH, width=180)
+
 st.title("Safety Intelligence Dashboard")
 st.caption(f"Analyzing: **{selected_street}**")
 
+k1, k2, k3 = st.columns(3)
+k1.metric("Crash Volume", f"{len(df):,}")
+k2.metric("Lives Lost", int(df["death_cnt"].sum()))
+k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
+
 # --- TABS ---
-t1, t2, t3, t4, t5, t6 = st.tabs(["Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
 
-with t1:
+with tab1:
+    st.write("##### Top predictors determined through a random forest model trained on Austin crash data.")
     st.image("https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed/BI%20to%20AI%20SHAP%20vf.png", width=800)
-    st.plotly_chart(px.bar(df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index(), x="Year", y="Estimated Total Comprehensive Cost", color_continuous_scale="Purples"), use_container_width=True)
+    df_total_cost = df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
+    st.plotly_chart(px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", color_continuous_scale="Purples"), use_container_width=True)
 
-
-
-with t2:
+with tab2:
     st.plotly_chart(px.density_mapbox(df, lat="latitude", lon="longitude", z="Estimated Total Comprehensive Cost", radius=12, zoom=10, mapbox_style="open-street-map", color_continuous_scale="Purples"), use_container_width=True)
 
-with t3:
+with tab3:
     c1, c2 = st.columns(2)
     c1.plotly_chart(px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r), use_container_width=True)
     c2.plotly_chart(px.bar(df.groupby("Speed_Bin", observed=False).size().reset_index(name="Count"), x="Speed_Bin", y="Count", color_discrete_sequence=["#4B0082"]), use_container_width=True)
 
-with t4:
-    st.plotly_chart(px.density_heatmap(df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count"), x="HOUR", y="DAY_NAME", z="Count", color_continuous_scale="Purples"), use_container_width=True)
+with tab4:
+    heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
+    st.plotly_chart(px.density_heatmap(heat_df, x="HOUR", y="DAY_NAME", z="Count", color_continuous_scale="Purples"), use_container_width=True)
 
-with t5:
-    modes = ["Bicycle", "Pedestrian", "Motorcycle"]
-    mode_stats = pd.DataFrame([{"Mode": m, "Avg Cost": df[df[m]==1]["Estimated Total Comprehensive Cost"].mean()} for m in modes])
-    st.plotly_chart(px.bar(mode_stats, x="Mode", y="Avg Cost", color="Avg Cost", color_continuous_scale="Purples"), use_container_width=True)
+with tab5:
+    modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle"]
+    mode_stats = []
+    for m in modes:
+        subset = df[df[m] == 1]
+        if not subset.empty:
+            mode_stats.append({"Mode": m, "Average Cost": subset["Estimated Total Comprehensive Cost"].mean()})
+    if mode_stats:
+        st.plotly_chart(px.bar(pd.DataFrame(mode_stats), x="Mode", y="Average Cost", color_continuous_scale="Purples"), use_container_width=True)
 
-with t6:
+with tab6:
     if df_prescriptive_raw is not None:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
-        if selected_street != "All Corridors": dfp = dfp[dfp["Address"].str.contains(selected_street, case=False, na=False)]
-        kpi_row(dfp)
+        if selected_street != "All Corridors":
+            dfp = dfp[dfp["address_short"].str.contains(selected_street, case=False, na=False)]
         build_map(dfp, 50, dfp["best_action"].unique())
         action_bars(dfp)
         ranked_table_and_details(dfp, 50)
