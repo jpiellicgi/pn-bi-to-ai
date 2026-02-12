@@ -15,7 +15,7 @@ import requests
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="TxDOT | Austin Safety Intelligence Elite",
+    page_title="CGI | Austin Safety Intelligence Elite",
     layout="wide",
     page_icon="🛣️"
 )
