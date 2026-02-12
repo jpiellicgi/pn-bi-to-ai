@@ -878,35 +878,109 @@ with tab6:
     # ---------- RIGHT KPI STACK ----------
     with colR:
 
-        def _kpi_card(title, value, foot=None):
+        # def _kpi_card(title, value, foot=None):
+        #     html(f"""
+        #         <div style="
+        #             border:1px solid rgba(49,51,63,0.12);
+        #             border-radius:10px;
+        #             padding:12px 16px;
+        #             margin-bottom:4px;
+        #             background:var(--background-color);
+        #         ">
+        #             <div style="
+        #                 font-size:0.90rem;
+        #                 color:var(--secondary-text-color);
+        #                 margin-bottom:4px;
+        #                 font-family: inherit;
+        #             ">{title}</div>
+        
+        #             <div style="
+        #                 font-size:1.8rem;         /* <--- BIG VALUE */
+        #                 font-weight:600;          /* <--- MAX BOLD */
+        #                 line-height:1.1;
+        #                 margin-bottom:2px;
+        #                 color:var(--text-color);
+        #                 font-family: inherit
+        #             ">{value}</div>
+        
+        #             { f'<div style="font-size:0.8rem;color:var(--secondary-text-color);">{foot}</div>' if foot else '' }
+        #         </div>
+        #     """,
+        #     height=140)
+        #     from streamlit.components.v1 import html
+
+        def _kpi_card(title, value, foot=None, *, size_rem=2.2, gap_px=4, height_px=100):
+            """
+            Renders a compact KPI card with explicit font family and minimal spacing.
+        
+            Args:
+                title (str): KPI title (small, subtle)
+                value (str): KPI value (big, bold)
+                foot (str|None): Optional footnote/delta
+                size_rem (float): Font size for value (in rem). Try 1.9–2.6
+                gap_px (int): Space below the outer card (px). Use 0–8
+                height_px (int): Iframe height. Lower = less whitespace. Try 90–120
+            """
             html(f"""
-                <div style="
-                    border:1px solid rgba(49,51,63,0.12);
-                    border-radius:10px;
-                    padding:12px 16px;
-                    margin-bottom:4px;
-                    background:var(--background-color);
-                ">
-                    <div style="
-                        font-size:0.90rem;
-                        color:var(--secondary-text-color);
-                        margin-bottom:4px;
-                        font-family: inherit;
-                    ">{title}</div>
+                <html>
+                    <head>
+                        <style>
+                            /* Reset iframe defaults to eliminate unexpected gaps */
+                            html, body {{
+                                padding: 0;
+                                margin: 0;
+                            }}
         
-                    <div style="
-                        font-size:1.8rem;         /* <--- BIG VALUE */
-                        font-weight:600;          /* <--- MAX BOLD */
-                        line-height:1.1;
-                        margin-bottom:2px;
-                        color:var(--text-color);
-                        font-family: inherit
-                    ">{value}</div>
+                            /* Match Streamlit's default font stack */
+                            .kpi-root * {{
+                                font-family:
+                                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+                                    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+                                color: var(--text-color);
+                            }}
         
-                    { f'<div style="font-size:0.8rem;color:var(--secondary-text-color);">{foot}</div>' if foot else '' }
-                </div>
-            """,
-            height=140)
+                            .kpi-card {{
+                                border: 1px solid rgba(49,51,63,0.12);
+                                border-radius: 10px;
+                                padding: 10px 12px;      /* compact inner padding */
+                                margin: 0 0 {gap_px}px 0; /* control space between cards */
+                                background: var(--background-color);
+                            }}
+        
+                            .kpi-title {{
+                                font-size: 0.9rem;
+                                color: var(--secondary-text-color);
+                                margin: 0 0 4px 0;       /* tight spacing above the value */
+                                font-weight: 600;
+                            }}
+        
+                            .kpi-value {{
+                                font-size: {size_rem}rem; /* BIG, TUNABLE */
+                                font-weight: 900;         /* max bold */
+                                line-height: 1.1;
+                                margin: 0 0 2px 0;       /* tighten space above footnote */
+                                color: var(--text-color);
+                            }}
+        
+                            .kpi-foot {{
+                                font-size: 0.8rem;
+                                color: var(--secondary-text-color);
+                                margin: 0;
+                                font-weight: 500;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="kpi-root">
+                            <div class="kpi-card">
+                                <div class="kpi-title">{title}</div>
+                                <div class="kpi-value">{value}</div>
+                                {f'<div class="kpi-foot">{foot}</div>' if foot else ''}
+                            </div>
+                        </div>
+                    </body>
+                </html>
+            """, height=height_px)
 
         # KPI 1 — total expected reduction
         total_reduction = float(df_topn["expected_reduction_amount"].sum())
@@ -924,9 +998,13 @@ with tab6:
         locations_display = f"{len(df_topn):,}"
 
         # Render KPI cards
-        _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}")
-        _kpi_card("Median % Reduction", median_pct_display)
-        _kpi_card("Locations in Scope", locations_display)
+        # _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}")
+        # _kpi_card("Median % Reduction", median_pct_display)
+        # _kpi_card("Locations in Scope", locations_display)
+
+        _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}", size_rem=2.1, gap_px=4, height_px=95)
+        _kpi_card("Median % Reduction", median_pct_display, size_rem=2.0, gap_px=4, height_px=95)
+        _kpi_card("Locations in Scope", locations_display, size_rem=2.0, gap_px=4, height_px=95)
 
     # Close the top wrapper
     st.markdown('</div>', unsafe_allow_html=True)
