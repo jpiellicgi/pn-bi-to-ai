@@ -583,22 +583,59 @@ with tab2:
 # --- TAB 3 ---
 with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
-    r1c2, r1c3 = st.columns(2) #removed r1c1 for testing
+    r1c1, r1c2, r1c3 = st.columns(3) #removed r1c1 for testing
     # with r1c1:
     #     hr_vol = df.groupby("HOUR").size().reset_index(name="Volume")
     #     st.plotly_chart(
     #         px.line(hr_vol, x="HOUR", y="Volume", markers=True, color_discrete_sequence=["#6A0DAD"]),
     #         use_container_width=True,
     #     )
-    with r1c2:
-        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r)
+    with r1c1:
+        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r, title='Accident Severity Breakdown')
+        fig_pie.update_layout(
+            height=450, 
+            width=500,
+            legend=dict(
+                x=0.85,          # Pulls legend closer to the center
+                #xanchor="left",
+                #yanchor="middle",
+                y=0.5
+                )   
+            )
         st.plotly_chart(fig_pie, use_container_width=True)
     
+    with r1c2:
+        #Accidents by Speed Limit and Severity
+        df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"]).size().reset_index(name="Accident_Count")
+        #df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"])["ID"].count().reset_index(name="Accident_Count")
+        fig_bar = px.bar(
+            df_speed_severity,
+            x="Speed_Bin",
+            y="Accident_Count",
+            color="Severity_Label",
+            title="Accidents by Speed Limit and Severity",
+            labels={"Accident_Count": "Number of Accidents", "Speed_Bin": "Speed Limit (mph)", "Severity_Label": "Severity Label"},
+            # This ensures the bars are stacked rather than grouped
+            barmode="stack",
+            # Optional: Define a specific order for the severity levels in the legend
+            category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+            color_discrete_sequence=px.colors.sequential.Purples_r
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
     with r1c3:
-        df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"])["ID"].count().reset_index()
-        df_speed_severity.columns = ["Speed_Bin", "Severity_Label", "Number of Acccidents"]
-        fig_speed_severity= st.bar_chart(df_speed_severity, x="Speed_Bin", y="Number of Acccidents", color="Severity_Label")
-        st.plotly_chart(fig_speed_severity)
+        #Average cost by speed bin
+        df_avg_cost_speed= df.groupby("Speed_Bin")["Estimated Total Comprehensive Cost"].mean().reset_index()
+        fig_avg_cost_speed= px.bar(df_avg_cost_speed, x="Speed_Bin", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
+            title= "Average Estimated Cost by Speed Bin",labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"},                            
+            color_continuous_scale="Purples", text_auto=".2s")
+        # fig_avg_cost_speed.update_layout(
+        #     height=300, 
+        #     width=400,
+        #     margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+        #     )
+        st.plotly_chart(fig_avg_cost_speed)
+
 
 # --- TAB 4 ---
 with tab4:    
@@ -608,20 +645,47 @@ with tab4:
         x="HOUR",
         y="DAY_NAME",
         z="Count",
+        title= "Number of Accidents by Day and Hour",
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
     st.plotly_chart(fig_heat, use_container_width=True)
 
-    df_hour_severity= df.groupby(["Hour", "Severity_Label"])["ID"].count().reset_index()
-    df_hour_severity.columns = ["Hour", "Severity_Label", "Number of Acccidents"]
-    fig_hour_severity= st.bar_chart(df_hour_severity, x="Hour", y="Number of Acccidents", color="Severity_Label")
-    st.plotly_chart(fig_hour_severity, use_container_width=True)
+    #Average cost by speed bin
+    df_avg_cost_hour= df.groupby("HOUR")["Estimated Total Comprehensive Cost"].mean().reset_index()
+    fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
+        title= "Average Estimated Cost by Hour",                            
+        color_continuous_scale="Purples", text_auto=".2s")
+    # fig_avg_cost_speed.update_layout(
+    #     height=300, 
+    #     width=400,
+    #     margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+    #     )
+    st.plotly_chart(fig_avg_cost_hour)
+
+    #Severity Breakdown by Hour
+    df_hour_severity= df.groupby(["HOUR", "Severity_Label"]).size().reset_index(name="Accident_Count")
+    fig_bar = px.bar(
+        df_hour_severity,
+        x="HOUR",
+        y="Accident_Count",
+        color="Severity_Label",
+        title="Number of Accidents by Hour and Severity",
+        labels={"Accident_Count": "Number of Accidents", "Severity_Label": "Severity Label"},
+        # This ensures the bars are stacked rather than grouped
+        barmode="stack",
+        # Optional: Define a specific order for the severity levels in the legend
+        category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+        color_discrete_sequence=px.colors.sequential.Purples_r
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
 
 
 # --- TAB 5 ---
 with tab5:
     st.subheader("Economic Impact by Transportation Type")
+    st.write("##### This page shows the cost of accidents in which a pedestrian, bicycle, or motorcycle were involved.")
+    st.markdown("<br>", unsafe_allow_html=True)
 
     modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", "Commercial Veh"]
     mode_stats = []
