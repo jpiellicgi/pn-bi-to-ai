@@ -410,11 +410,9 @@ def build_map(df_in: pd.DataFrame, top_n: int, all_actions: list):
     if size_col is None:
         fig.update_traces(marker={"size": 10})
 
-    # Stroke & opacity similar to your pydeck style
     fig.update_traces(
-        marker=dict(
-            opacity=0.85,
-            line=dict(width=1, color="rgba(20,20,20,0.9)"),
+            opacity=0.85,               # ✅ trace-level opacity
+            marker=dict(line=dict(width=1, color="rgba(20,20,20,0.9)"))
         )
     )
 
