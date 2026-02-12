@@ -884,21 +884,23 @@ with tab6:
                     border:1px solid rgba(49,51,63,0.12);
                     border-radius:10px;
                     padding:12px 16px;
-                    margin-bottom:8px;
+                    margin-bottom:4px;
                     background:var(--background-color);
                 ">
                     <div style="
                         font-size:0.90rem;
                         color:var(--secondary-text-color);
                         margin-bottom:4px;
+                        font-family: inherit;
                     ">{title}</div>
         
                     <div style="
                         font-size:1.8rem;         /* <--- BIG VALUE */
                         font-weight:600;          /* <--- MAX BOLD */
                         line-height:1.1;
-                        margin-bottom:4px;
+                        margin-bottom:2px;
                         color:var(--text-color);
+                        font-family: inherit
                     ">{value}</div>
         
                     { f'<div style="font-size:0.8rem;color:var(--secondary-text-color);">{foot}</div>' if foot else '' }
