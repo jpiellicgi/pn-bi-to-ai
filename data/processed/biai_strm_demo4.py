@@ -23,8 +23,8 @@ st.set_page_config(
 
 # --- 2. ROBUST LOGO LOADER ---
 # This looks for your file locally, then on GitHub
-LOGO_FILENAME = "CGI_logo_rgb_white.png"
-GITHUB_LOGO_URL = "https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed/CGI_logo_rgb_white.png"
+LOGO_FILENAME = "CGI_logo_color_rgb.jpg"
+GITHUB_LOGO_URL = "https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed/CGI_logo_color_rgb.jpg"
 
 def get_logo():
     """Returns a valid path or URL for the logo, or None if not found."""
