@@ -36,19 +36,19 @@ CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
 
 # --- 3. SMART ASSET LOADER ---
-def get_txdot_logo():
+def get_cgi_logo():
     """
     Locates the corporate logo by checking local file extensions and URL patterns[cite: 111].
     """
     extensions = ["*.png", "*.jpg", "*.jpeg", "*.svg", "*.webp"]
     for ext in extensions:
-        pattern = os.path.join(DATA_DIR, "txdot" + ext)
+        pattern = os.path.join(DATA_DIR, "CGI_logo_color_rgb" + ext)
         files = glob.glob(pattern)
         if files:
             return files[0]
     return None
 
-LOGO_PATH = get_txdot_logo()
+LOGO_PATH = get_cgi_logo()
 
 # ----------------------------
 # Shared: Safe remote CSV loader
