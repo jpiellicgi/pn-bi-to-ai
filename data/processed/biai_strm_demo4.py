@@ -334,7 +334,7 @@ def action_bars(df: pd.DataFrame):
     # --- Chart 1: Total reduction ---
     bar1 = (
         alt.Chart(agg)
-        .mark_bar(color="5236ab")
+        .mark_bar(color="#5236ab")
         .encode(
             x=alt.X(
                 "best_action:N",
@@ -362,7 +362,7 @@ def action_bars(df: pd.DataFrame):
     # --- Chart 2: Locations ---
     bar2 = (
         alt.Chart(agg)
-        .mark_bar(color="5236ab")
+        .mark_bar(color="#5236ab")
         .encode(
             x=alt.X(
                 "best_action:N",
