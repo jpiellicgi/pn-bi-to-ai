@@ -265,8 +265,18 @@ def kpi_row(df: pd.DataFrame):
 def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
     df = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
 
+    
+CTION_COLORS_RGB = {
+        "reduce_speed_limit":   (227, 25, 55),
+        "increase_enforcement":      (82, 54, 171),
+        "improve_crosswalks":  (110, 63, 237),
+        "micromobility_zone_controls":    (255, 115, 98),
+        "work_zone_controls":   (203, 195, 230),
+        "add_speed_bumps":    (168, 36, 101)
+    }
+
     cmap = action_color_map(all_actions)
-    df["color"] = df["best_action"].map(lambda x: list(cmap.get(x, (120, 120, 120))))
+    df["color"] = df["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
 
     df["pct_reduction_display"] = (df["pct_reduction_norm"] * 100).round(1).astype(str) + "%"
     df["pred_est_ttl_comp_cost_display"] = df["pred_est_ttl_comp_cost"].map(fmt_dollars)
