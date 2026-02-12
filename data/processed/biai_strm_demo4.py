@@ -879,10 +879,17 @@ with tab6:
 
         def _kpi_card(title, value, foot=None):
             st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+        
+            # Title (smaller/subtle)
             st.markdown(f'<div class="kpi-title">{title}</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="kpi-value">{value}</div>', unsafe_allow_html=True)
+        
+            # VALUE — use <span class="kpi-value"> so CSS applies reliably
+            st.markdown(f'<span class="kpi-value">{value}</span>', unsafe_allow_html=True)
+        
+            # Optional footnote (delta, context)
             if foot:
                 st.markdown(f'<div class="kpi-foot">{foot}</div>', unsafe_allow_html=True)
+        
             st.markdown('</div>', unsafe_allow_html=True)
 
         # KPI 1 — total expected reduction
