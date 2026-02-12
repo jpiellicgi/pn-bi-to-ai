@@ -20,11 +20,10 @@ st.set_page_config(
     page_icon="🛣️"
 )
 
-# --- NEW: ADD LOGO TO TOP LEFT OF MAIN PAGE ---
-# This ensures the logo appears at the very top of the content area
-LOGO_FILENAME = "txdot.png" # Adjust extension if your file is .jpg or .svg
+# --- NEW: ADD COMPANY LOGO TO TOP LEFT ---
+LOGO_FILENAME = "CGI_logo_color_rgb.svg"
 if os.path.exists(LOGO_FILENAME):
-    st.image(LOGO_FILENAME, width=200)
+    st.image(LOGO_FILENAME, width=150)
 
 # Make Altair nicer
 alt.data_transformers.disable_max_rows()
@@ -42,10 +41,12 @@ CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
 
 
-# --- 3. SMART ASSET LOADER (NOTE: glob works for local files, not URLs) ---
+# --- 3. SMART ASSET LOADER ---
 def get_txdot_logo():
-    # If you later add a local logo in the repo (e.g., ./data/processed/txdot.png),
-    # you can switch DATA_DIR to a local path or directly use a URL with st.image(URL).
+    # Priority check for your specific company logo
+    if os.path.exists(LOGO_FILENAME):
+        return LOGO_FILENAME
+        
     extensions = ["*.png", "*.jpg", "*.jpeg", "*.svg", "*.webp"]
     for ext in extensions:
         pattern = os.path.join(DATA_DIR, "txdot" + ext)
