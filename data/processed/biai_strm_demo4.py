@@ -725,10 +725,9 @@ with tab5:
 # --- ✅ TAB 6 (YOUR PRESCRIPTIVE ACTIONS) ---
 with tab6:
 
-    # ---------- Title area (tighter spacing) ----------
+    # ---------- Local scoped CSS for tidy spacing ----------
     top_css = """
     <style>
-      /* Scope styles to this tab only using .presc-top */
       .presc-top h3,
       .presc-top p {
         margin-top: 0.15rem !important;
@@ -769,7 +768,6 @@ with tab6:
         margin: 0;
       }
 
-      /* Optional sticky left side */
       @media (min-width: 768px) {
         .presc-top .sticky-col {
           position: sticky;
@@ -782,13 +780,14 @@ with tab6:
     st.markdown(top_css, unsafe_allow_html=True)
     st.markdown('<div class="presc-top">', unsafe_allow_html=True)
 
-    # ---------- Heading ----------
+    # ---------- Title ----------
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
 
     # ---------- Data prep ----------
     if df_prescriptive_raw is None:
         st.error(f"Prescriptive dataset failed to load: {prescriptive_load_error}")
+        st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
     try:
@@ -796,26 +795,29 @@ with tab6:
     except Exception as e:
         st.error(f"Prescriptive data validation error: {e}")
         st.write("Columns found:", list(df_prescriptive_raw.columns))
+        st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
+    # Remove "no-change"
     dfp = dfp[dfp["best_action"] != "no_change"].copy()
 
+    # Apply global corridor if selected
     if selected_street not in ["All Corridors", "--- Full Street List ---"]:
         dfp = dfp[dfp["address"].str.contains(selected_street, case=False, na=False)].copy()
 
     if dfp.empty:
-        st.warning("No prescriptive records match the current corridor selection. Try 'All Corridors'.")
+        st.warning("No prescriptive records match the current corridor selection.")
         st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
     all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
 
-    # =======================================================
-    # TOP SECTION: Filters (left) + Vertical KPIs (right)
-    # =======================================================
-    colL, colR = st.columns([3, 2], gap="small")   # wider filter panel!
+    # ======================================================
+    # TOP LAYOUT: Filters (Left) + KPIs (Right)
+    # ======================================================
+    colL, colR = st.columns([3, 2], gap="small")
 
-    # ---------- LEFT: Filters ----------
+    # ---------- LEFT FILTER PANEL ----------
     with colL:
         st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
 
@@ -837,21 +839,21 @@ with tab6:
             key="presc_topn"
         )
 
-        # Optional additional filters
+        # Advanced filters
         with st.expander("More filters"):
             if "severity" in dfp.columns:
-                _sevs = sorted(dfp["severity"].dropna().unique().tolist())
-                st.multiselect("Severity", _sevs, key="presc_severity")
+                sevs = sorted(dfp["severity"].dropna().unique().tolist())
+                st.multiselect("Severity", sevs, key="presc_severity")
 
             if "district" in dfp.columns:
-                _dists = sorted(dfp["district"].dropna().unique().tolist())
-                st.multiselect("District", _dists, key="presc_district")
+                dists = sorted(dfp["district"].dropna().unique().tolist())
+                st.multiselect("District", dists, key="presc_district")
 
         st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ---------- Apply filters ----------
+    # ---------- Apply filters to data ----------
     dfp_f = dfp[dfp["best_action"].isin(st.session_state.get("presc_actions", all_actions))].copy()
 
     if st.session_state.get("presc_severity"):
@@ -872,7 +874,7 @@ with tab6:
         .head(st.session_state["presc_topn"])
     )
 
-    # ---------- RIGHT: Vertical KPI Cards ----------
+    # ---------- RIGHT KPI STACK ----------
     with colR:
 
         def _kpi_card(title, value, foot=None):
@@ -883,3 +885,58 @@ with tab6:
                 st.markdown(f'<div class="kpi-foot">{foot}</div>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
+        # KPI 1 — total expected reduction
+        total_reduction = float(df_topn["expected_reduction_amount"].sum())
+
+        # KPI 2 — median pct reduction
+        if "pct_reduction" in df_topn.columns:
+            pct_series = df_topn["pct_reduction"]
+            if pct_series.max() > 1.0:
+                pct_series = pct_series / 100.0
+            median_pct_display = f"{float(pct_series.median()):.1%}"
+        else:
+            median_pct_display = "—"
+
+        # KPI 3 — number of top-N locations
+        locations_display = f"{len(df_topn):,}"
+
+        # Render KPI cards
+        _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}")
+        _kpi_card("Median % Reduction", median_pct_display)
+        _kpi_card("Locations in Scope", locations_display)
+
+    # Close the top wrapper
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ======================================================
+    # FULL-WIDTH CONTENT
+    # ======================================================
+    st.divider()
+
+    # Map
+    st.subheader(f"Impact map (Top {st.session_state['presc_topn']} | color = action)")
+    build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
+
+    st.divider()
+
+    # Portfolio summary
+    st.subheader("Action portfolio summary")
+    action_bars(dfp_f)
+
+    st.divider()
+
+    # Table + detail view
+    ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
+
+    # Notes
+    with st.expander("Notes & tips"):
+        st.markdown(
+            """
+            **Map encoding**
+            - **Color**: `best_action`
+
+            **Percent normalization**
+            - If `pct_reduction` is 0–100, it is converted to 0–1 automatically.
+            - If it's already 0–1, it stays as-is.
+            """
+        )
