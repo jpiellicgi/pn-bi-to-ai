@@ -878,19 +878,32 @@ with tab6:
     with colR:
 
         def _kpi_card(title, value, foot=None):
-            st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+            html(f"""
+                <div style="
+                    border:1px solid rgba(49,51,63,0.12);
+                    border-radius:10px;
+                    padding:12px 16px;
+                    margin-bottom:8px;
+                    background:var(--background-color);
+                ">
+                    <div style="
+                        font-size:0.90rem;
+                        color:var(--secondary-text-color);
+                        margin-bottom:4px;
+                    ">{title}</div>
         
-            # Title (smaller/subtle)
-            st.markdown(f'<div class="kpi-title">{title}</div>', unsafe_allow_html=True)
+                    <div style="
+                        font-size:1.8rem;         /* <--- BIG VALUE */
+                        font-weight:600;          /* <--- MAX BOLD */
+                        line-height:1.1;
+                        margin-bottom:4px;
+                        color:var(--text-color);
+                    ">{value}</div>
         
-            # VALUE — use <span class="kpi-value"> so CSS applies reliably
-            st.markdown(f'<span class="kpi-value">{value}</span>', unsafe_allow_html=True)
-        
-            # Optional footnote (delta, context)
-            if foot:
-                st.markdown(f'<div class="kpi-foot">{foot}</div>', unsafe_allow_html=True)
-        
-            st.markdown('</div>', unsafe_allow_html=True)
+                    { f'<div style="font-size:0.8rem;color:var(--secondary-text-color);">{foot}</div>' if foot else '' }
+                </div>
+            """,
+            height=140)
 
         # KPI 1 — total expected reduction
         total_reduction = float(df_topn["expected_reduction_amount"].sum())
