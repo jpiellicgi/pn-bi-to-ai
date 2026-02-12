@@ -21,183 +21,146 @@ st.set_page_config(
     page_icon="🛣️"
 )
 
-# --- 2. ROBUST LOGO LOADER ---
-# This looks for your file locally, then on GitHub
+# --- 2. LOGO ASSET MANAGEMENT ---
+# Standardized naming for corporate branding
 LOGO_FILENAME = "CGI_logo_color_rgb.jpg"
 GITHUB_LOGO_URL = "https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed/CGI_logo_color_rgb.jpg"
 
 def get_logo():
-    """Returns a valid path or URL for the logo, or None if not found."""
+    """Locates logo asset: checks local filesystem first, then remote GitHub repository."""
     if os.path.exists(LOGO_FILENAME):
         return LOGO_FILENAME
-    # Test if GitHub link is alive
     try:
         response = requests.head(GITHUB_LOGO_URL, timeout=5)
         if response.status_code == 200:
             return GITHUB_LOGO_URL
-    except:
+    except Exception:
         pass
     return None
 
 LOGO_PATH = get_logo()
 
-# Render logo at the top of the main area
+# Display logo at the top of the main dashboard area
 if LOGO_PATH:
     st.image(LOGO_PATH, width=180)
 else:
-    st.sidebar.error(f"⚠️ Logo file '{LOGO_FILENAME}' not found locally or on GitHub.")
+    st.sidebar.error(f"⚠️ Logo asset '{LOGO_FILENAME}' missing from local and remote paths.")
 
-# Make Altair nicer
 alt.data_transformers.disable_max_rows()
 
-# --- 3. PATH CONFIGURATION ---
+# --- 3. RESOURCE PATH CONFIGURATION ---
 DATA_DIR = "https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed"
 LOCAL_DATA_DIR = 'data/processed'
 
-CSV_FILENAME1 = "atx_crash_data_2018-2026_clean.csv"
-CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
-
-CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
-CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
+CSV_PATH1 = f"{DATA_DIR}/atx_crash_data_2018-2026_clean.csv"
+CSV_PATH2 = f"{DATA_DIR}/outputs/df_prescriptive_final_20260204_102224.csv"
 
 MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
 
 # ----------------------------
-# Data Loaders
+# Data Loading & Processing
 # ----------------------------
+
 @st.cache_data(show_spinner=False)
 def read_csv_url(url: str) -> pd.DataFrame:
+    """Fetches CSV data from a URL with basic connectivity validation."""
     r = requests.get(url, timeout=60)
     if r.status_code != 200:
         raise FileNotFoundError(f"HTTP {r.status_code} fetching {url}")
-    if len(r.content) <= 10:
-        raise ValueError(f"Remote file is too small. URL: {url}")
     return pd.read_csv(pd.io.common.BytesIO(r.content), low_memory=False)
 
 @st.cache_data(show_spinner=False)
 def load_partner_data(url: str) -> pd.DataFrame:
+    """Primary pipeline for historical data: standardizes types, severity, and mode flags."""
     try:
         df = read_csv_url(url)
     except Exception:
+        # Fallback to local data folder if remote fails
         local_path = os.path.join(LOCAL_DATA_DIR, os.path.split(url)[-1])
         df = pd.read_csv(local_path)
 
+    # Temporal feature engineering
     df["Crash timestamp"] = pd.to_datetime(df["Crash timestamp (US/Central)"], errors="coerce")
     df["Year"] = df["Crash timestamp"].dt.year
     df["HOUR"] = df["Crash timestamp"].dt.hour
     df["DAY_NAME"] = df["Crash timestamp"].dt.day_name()
 
+    # Domain-specific label mapping
     sev_map = {1: "Fatal", 2: "Serious Injury", 3: "Minor Injury", 4: "Possible Injury", 0: "No Injury", 5: "Unknown"}
     df["Severity_Label"] = df["crash_sev_id"].map(sev_map)
 
-    cols_to_fix = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost"]
-    for col in cols_to_fix:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-        else:
-            df[col] = 0
+    # Sanitize numeric columns for visualization
+    numeric_cols = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost", "death_cnt"]
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df.get(col, 0), errors="coerce").fillna(0)
 
+    # Standardize Involvement Flags (handles varying column naming conventions)
     mapping = {
-        "Passenger Car": ["passenger_car_involved", "car_fl", "is_car"],
-        "Bicycle": ["bicycle_involved", "bicycle_fl", "is_bike"],
-        "Pedestrian": ["pedestrian_involved", "pedestrian_fl", "is_ped"],
-        "Motorcycle": ["motorcycle_involved", "motorcycle_fl", "is_mc"],
-        "Commercial Veh": ["comml_mtr_veh_fl", "cmv_involved", "is_truck"],
+        "Passenger Car": ["passenger_car_involved", "is_car"],
+        "Bicycle": ["bicycle_involved", "is_bike"],
+        "Pedestrian": ["pedestrian_involved", "is_ped"],
+        "Motorcycle": ["motorcycle_involved", "is_mc"],
+        "Commercial Veh": ["comml_mtr_veh_fl", "is_truck"],
     }
-
-    for clean_label, variations in mapping.items():
+    for label, variations in mapping.items():
         actual_col = next((v for v in variations if v in df.columns), None)
-        if actual_col:
-            df[clean_label] = df[actual_col].apply(lambda x: 1 if str(x).strip().upper() in ["Y", "1", "TRUE", "YES"] else 0)
-        else:
-            df[clean_label] = 0
+        df[label] = df[actual_col].apply(lambda x: 1 if str(x).strip().upper() in ["Y", "1", "TRUE", "YES"] else 0) if actual_col else 0
 
     df["marker_size"] = (df["crash_speed_limit"] / 5).clip(lower=2)
-    bins = [0, 20, 30, 40, 50, 60, 70, 80, 110]
-    labels = ["<20", "20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80+"]
-    df["Speed_Bin"] = pd.cut(df["crash_speed_limit"], bins=bins, labels=labels)
-
     return df.dropna(subset=["latitude", "longitude"])
 
-# ----------------------------
-# Prescriptive Helpers
-# ----------------------------
-REQUIRED_COLS = ["latitude", "longitude", "Address", "pred_est_ttl_comp_cost", "best_action", "expected_cost_after_action", "expected_reduction_amount", "pct_reduction", "ai_rationale"]
-
-def _coerce_numeric(df, cols):
-    out = df.copy()
-    for c in cols:
-        if c in out.columns:
-            out[c] = pd.to_numeric(out[c], errors="coerce")
-    return out
-
-def normalize_pct_reduction(series):
-    s = pd.to_numeric(series, errors="coerce")
-    if s.dropna().empty: return s
-    return s / 100.0 if s.dropna().quantile(0.95) > 1.5 else s
-
-def make_location_id(df):
-    return df["latitude"].round(5).astype(str) + ", " + df["longitude"].round(5).astype(str)
-
 def fmt_dollars(x):
-    try:
-        return f"${float(x):,.0f}" if pd.notnull(x) else "—"
-    except:
-        return "—"
-
-def compact_text(s, n=140):
-    s = str(s).strip()
-    return s if len(s) <= n else s[:n-1] + "…"
+    """Formats numeric values into localized currency strings."""
+    return f"${float(x):,.0f}" if pd.notnull(x) else "—"
 
 @st.cache_data(show_spinner=False)
 def prepare_prescriptive_df(df_prescriptive):
+    """Processes AI-generated prescriptive actions for dashboard display."""
     df = df_prescriptive.copy()
-    df = _coerce_numeric(df, ["latitude", "longitude", "pred_est_ttl_comp_cost", "expected_cost_after_action", "expected_reduction_amount", "pct_reduction"])
+    num_cols = ["latitude", "longitude", "pred_est_ttl_comp_cost", "expected_reduction_amount", "pct_reduction"]
+    for c in num_cols: 
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+        
     df = df.dropna(subset=["latitude", "longitude"]).copy()
-    df["pct_reduction_norm"] = normalize_pct_reduction(df["pct_reduction"])
-    df["location_id"] = make_location_id(df)
     df["address"] = df["Address"].astype(str).fillna("").str.strip()
-    df["address_short"] = df["address"].map(lambda x: compact_text(x, 80))
-    df["ai_rationale_short"] = df["ai_rationale"].astype(str).map(lambda x: compact_text(x, 160))
+    # Truncate rationale for table readability
+    df["ai_rationale_short"] = df["ai_rationale"].astype(str).map(lambda x: (x[:157] + '...') if len(x) > 160 else x)
     return df
 
 # ----------------------------
-# Load Core Data
+# Application Execution
 # ----------------------------
-try:
-    df_raw1 = load_partner_data(CSV_PATH1)
-except Exception as e:
-    st.error(f"🛑 Crash dataset load failed: {e}")
-    st.stop()
 
+# Load core datasets
+df_raw1 = load_partner_data(CSV_PATH1)
 try:
     df_prescriptive_raw = read_csv_url(CSV_PATH2)
-except Exception as e:
+except Exception:
     df_prescriptive_raw = None
-    prescriptive_load_error = str(e)
 
-# --- 4. SIDEBAR ---
+# --- SIDEBAR FILTERS ---
 with st.sidebar:
-    if LOGO_PATH:
+    if LOGO_PATH: 
         st.image(LOGO_PATH, use_container_width=True)
     st.title("Global Filters")
-    all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
-    selected_years = st.multiselect("📅 Fiscal Years:", all_years, default=all_years[-4:])
-    top_10_names = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
-    corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
-    selected_street = st.selectbox("📍 Corridor:", corridor_options)
+    
+    # Filter by Year
+    years = sorted(df_raw1["Year"].dropna().unique().astype(int))
+    sel_years = st.multiselect("📅 Fiscal Years:", years, default=years[-4:])
+    
+    # Filter by Corridor (Top 10 by Impact + Full Alpha List)
+    top_10 = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
+    corridor_list = ["All Corridors"] + top_10 + sorted(df_raw1["rpt_street_name"].unique().tolist())
+    sel_street = st.selectbox("📍 Corridor:", corridor_list)
 
-# Filter Logic
-df = df_raw1[df_raw1["Year"].isin(selected_years)]
-if selected_street not in ["All Corridors", "--- Full Street List ---"]:
-    df = df[df["rpt_street_name"] == selected_street]
-    current_focus = selected_street
-else:
-    current_focus = "Austin District (Full View)"
+# Apply filter state to global dataframe
+df = df_raw1[df_raw1["Year"].isin(sel_years)]
+if sel_street != "All Corridors":
+    df = df[df["rpt_street_name"] == sel_street]
 
-# --- 5. DASHBOARD HEADER ---
+# --- DASHBOARD HEADER ---
 st.title("Safety Intelligence Dashboard")
-st.caption(f"Currently Analyzing: **{current_focus}**")
+st.caption(f"Analyzing Data for: **{sel_street}**")
 
 k1, k2, k3 = st.columns(3)
 k1.metric("Crash Volume", f"{len(df):,}")
@@ -205,42 +168,99 @@ k2.metric("Lives Lost", int(df["death_cnt"].sum()))
 k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 st.markdown("---")
 
-# --- 6. TABS ---
+# --- TABBED ANALYSIS SECTIONS ---
 tabs = st.tabs(["Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
 
+# TAB 0: AI MODEL CONTEXT
 with tabs[0]:
-    st.write("##### Predictors determined via Random Forest model on Austin crash data (2018-Present).")
+    st.subheader("Random Forest Model Analysis")
     c1, c2 = st.columns([1, 2], gap="large")
     with c1:
-        st.subheader("Top Predictors")
-        st.image("https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed/BI%20to%20AI%20SHAP%20vf.png", width=800)
+        st.write("##### Feature Importance (SHAP)")
+        st.image("https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed/BI%20to%20AI%20SHAP%20vf.png", use_container_width=True)
     with c2:
-        st.subheader("Historical Trends")
+        st.write("##### Historical Economic Trends")
         cost_yr = df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
-        st.plotly_chart(px.bar(cost_yr, x="Year", y="Estimated Total Comprehensive Cost", color_continuous_scale="Purples", height=300), use_container_width=True)
+        st.plotly_chart(px.bar(cost_yr, x="Year", y="Estimated Total Comprehensive Cost", color_continuous_scale="Purples", height=350), use_container_width=True)
 
+# TAB 1: GEOGRAPHIC SPATIAL ANALYSIS
 with tabs[1]:
-    col_list, col_map = st.columns([1, 2])
-    with col_list:
-        risk_df = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).reset_index()
-        st.plotly_chart(px.bar(risk_df, x="Estimated Total Comprehensive Cost", y="rpt_street_name", orientation='h', color_discrete_sequence=["#4B0082"]), use_container_width=True)
-    with col_map:
-        lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
-        st.plotly_chart(px.density_mapbox(df, lat="latitude", lon="longitude", z="Estimated Total Comprehensive Cost", radius=10, center=dict(lat=lat_c, lon=lon_c), zoom=10, mapbox_style="open-street-map", color_continuous_scale="Purples", height=600), use_container_width=True)
+    st.subheader("Spatial Risk Distribution")
+    lat, lon = df["latitude"].median(), df["longitude"].median()
+    st.plotly_chart(px.density_mapbox(
+        df, lat="latitude", lon="longitude", z="Estimated Total Comprehensive Cost", 
+        radius=10, center=dict(lat=lat, lon=lon), zoom=10, 
+        mapbox_style="carto-positron", color_continuous_scale="Purples", height=600
+    ), use_container_width=True)
 
+# TAB 2: INCIDENT RISK PROFILE
+with tabs[2]:
+    st.subheader("Severity and Mode Involvement")
+    c1, c2 = st.columns(2)
+    with c1:
+        sev_counts = df["Severity_Label"].value_counts().reset_index()
+        st.plotly_chart(px.pie(
+            sev_counts, values='count', names='Severity_Label', 
+            title="Distribution by Severity", hole=0.4, 
+            color_discrete_sequence=px.colors.sequential.Purples_r
+        ), use_container_width=True)
+    with c2:
+        modes = ["Pedestrian", "Bicycle", "Motorcycle", "Commercial Veh"]
+        mode_counts = pd.DataFrame([{"Mode": m, "Count": df[m].sum()} for m in modes])
+        st.plotly_chart(px.bar(
+            mode_counts, x="Mode", y="Count", 
+            title="Involvement by Transport Mode", color_discrete_sequence=["#4B0082"]
+        ), use_container_width=True)
+
+# TAB 3: TEMPORAL PATTERNS
+with tabs[3]:
+    st.subheader("Temporal Pattern Detection")
+    c1, c2 = st.columns(2)
+    with c1:
+        hourly = df.groupby("HOUR").size().reset_index(name="Count")
+        st.plotly_chart(px.line(
+            hourly, x="HOUR", y="Count", title="Hourly Frequency (24hr Clock)", 
+            markers=True
+        ).update_traces(line_color="#9370DB"), use_container_width=True)
+    with c2:
+        day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        dow_counts = df["DAY_NAME"].value_counts().reindex(day_order).reset_index()
+        st.plotly_chart(px.bar(
+            dow_counts, x="DAY_NAME", y="count", 
+            title="Crashes by Day of Week", color_discrete_sequence=["#4B0082"]
+        ), use_container_width=True)
+
+# TAB 4: ECONOMIC ANALYSIS
+with tabs[4]:
+    st.subheader("Economic Impact Deep-Dive")
+    st.plotly_chart(px.scatter(
+        df, x="crash_speed_limit", y="Estimated Total Comprehensive Cost", 
+        color="Severity_Label", size="marker_size", 
+        title="Impact Correlation: Speed vs. Cost", 
+        color_discrete_sequence=px.colors.qualitative.Prism
+    ), use_container_width=True)
+    
+    st.write("#### Top 5 High-Impact Road Segments (Aggregated Cost)")
+    top_impact = df.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(5).reset_index()
+    top_impact["Estimated Total Comprehensive Cost"] = top_impact["Estimated Total Comprehensive Cost"].map(fmt_dollars)
+    st.table(top_impact)
+
+# TAB 5: AI PRESCRIPTIVE ACTIONS
 with tabs[5]:
-    st.subheader("Prescriptive Actions & Savings")
+    st.subheader("AI-Recommended Countermeasures")
     if df_prescriptive_raw is not None:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
-        dfp = dfp[dfp["best_action"] != "no_change"]
-        if selected_street not in ["All Corridors", "--- Full Street List ---"]:
-            dfp = dfp[dfp["address"].str.contains(selected_street, case=False, na=False)]
+        # Filter prescriptions based on the active Corridor selection
+        if sel_street != "All Corridors":
+            dfp = dfp[dfp["address"].str.contains(sel_street, case=False, na=False)]
         
         if not dfp.empty:
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Total Expected Savings", fmt_dollars(dfp["expected_reduction_amount"].sum()))
-            c2.metric("Avg. Reduction %", f"{(dfp['pct_reduction_norm'].mean()*100):.1f}%")
-            c3.metric("Top Action", dfp["best_action"].mode()[0])
-            st.dataframe(dfp[["address", "best_action", "expected_reduction_amount", "ai_rationale_short"]].sort_values("expected_reduction_amount", ascending=False), use_container_width=True)
+            st.metric("Potential Economic Savings (Targeted)", fmt_dollars(dfp["expected_reduction_amount"].sum()))
+            st.dataframe(
+                dfp[["address", "best_action", "ai_rationale_short"]].sort_values("address"), 
+                use_container_width=True
+            )
         else:
-            st.warning("No recommendations for this selection.")
+            st.warning("No specific prescriptive actions found for this corridor selection.")
+    else:
+        st.error("Prescriptive analytics dataset failed to load.")
