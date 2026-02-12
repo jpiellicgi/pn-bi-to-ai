@@ -21,7 +21,7 @@ st.set_page_config(
 )
 
 # --- NEW: ADD COMPANY LOGO TO TOP LEFT ---
-LOGO_FILENAME = "CGI_logo_color_rgb.svg"
+LOGO_FILENAME = "CGI_logo_rgb_white.png"
 if os.path.exists(LOGO_FILENAME):
     st.image(LOGO_FILENAME, width=150)
 
