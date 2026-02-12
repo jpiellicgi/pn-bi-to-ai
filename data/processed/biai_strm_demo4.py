@@ -6,6 +6,7 @@ from typing import Dict, Tuple
 import numpy as np
 import pandas as pd
 import streamlit as st
+from streamlit.components.v1 import html
 import plotly.express as px
 import pydeck as pdk
 import altair as alt
