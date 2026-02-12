@@ -334,7 +334,7 @@ def action_bars(df: pd.DataFrame):
     # --- Chart 1: Total reduction ---
     bar1 = (
         alt.Chart(agg)
-        .mark_bar()
+        .mark_bar(color="5236ab")
         .encode(
             x=alt.X(
                 "best_action:N",
@@ -362,7 +362,7 @@ def action_bars(df: pd.DataFrame):
     # --- Chart 2: Locations ---
     bar2 = (
         alt.Chart(agg)
-        .mark_bar()
+        .mark_bar(color="5236ab")
         .encode(
             x=alt.X(
                 "best_action:N",
@@ -877,37 +877,6 @@ with tab6:
 
     # ---------- RIGHT KPI STACK ----------
     with colR:
-
-        # def _kpi_card(title, value, foot=None):
-        #     html(f"""
-        #         <div style="
-        #             border:1px solid rgba(49,51,63,0.12);
-        #             border-radius:10px;
-        #             padding:12px 16px;
-        #             margin-bottom:4px;
-        #             background:var(--background-color);
-        #         ">
-        #             <div style="
-        #                 font-size:0.90rem;
-        #                 color:var(--secondary-text-color);
-        #                 margin-bottom:4px;
-        #                 font-family: inherit;
-        #             ">{title}</div>
-        
-        #             <div style="
-        #                 font-size:1.8rem;         /* <--- BIG VALUE */
-        #                 font-weight:400;          /* <--- MAX BOLD */
-        #                 line-height:1.1;
-        #                 margin-bottom:2px;
-        #                 color:var(--text-color);
-        #                 font-family: inherit
-        #             ">{value}</div>
-        
-        #             { f'<div style="font-size:0.8rem;color:var(--secondary-text-color);">{foot}</div>' if foot else '' }
-        #         </div>
-        #     """,
-        #     height=140)
-        #     from streamlit.components.v1 import html
 
         def _kpi_card(title, value, foot=None, *, size_rem=2.2, gap_px=4, height_px=100):
             """
