@@ -841,7 +841,7 @@ with tab6:
         # KPI stack (vertical)
         # If you already have kpi_row(), you can keep it;
         # below shows 'card' style aligned to right column width.
-        kpi_data = kpi_row(df_topn, return_data=True) if "kpi_row" in globals() else None
+        kpi_row(df_topn) 
         # If your kpi_row doesn't support return_data, you can use your function directly here
         # and/or replace with the following manual cards:
 
