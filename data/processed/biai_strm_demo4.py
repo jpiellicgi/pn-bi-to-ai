@@ -998,7 +998,6 @@ with tab6:
     st.divider()
 
     # Portfolio summary
-    st.subheader("Action portfolio summary")
     action_bars(dfp_f)
 
     st.divider()
