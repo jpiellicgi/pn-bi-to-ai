@@ -171,7 +171,8 @@ def normalize_pct_reduction(series: pd.Series) -> pd.Series:
 def make_location_id(df: pd.DataFrame) -> pd.Series:
     lat = df["latitude"].round(5).astype(str)
     lon = df["longitude"].round(5).astype(str)
-    return "loc_" + lat + "_" + lon + "_i" + df.index.astype(str)
+    # return "loc_" + lat + "_" + lon + "_i" + df.index.astype(str)
+    return lat + ", " + lon
 
 
 def action_color_map(actions) -> Dict[str, Tuple[int, int, int]]:
