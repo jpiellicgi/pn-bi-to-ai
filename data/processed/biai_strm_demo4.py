@@ -724,14 +724,73 @@ with tab5:
 
 # --- ✅ TAB 6 (YOUR PRESCRIPTIVE ACTIONS) ---
 with tab6:
+
+    # ---------- Title area (tighter spacing) ----------
+    top_css = """
+    <style>
+      /* Scope styles to this tab only using .presc-top */
+      .presc-top h3,
+      .presc-top p {
+        margin-top: 0.15rem !important;
+        margin-bottom: 0.35rem !important;
+      }
+
+      .presc-top .left-panel {
+        border: 1px solid rgba(49,51,63,0.12);
+        border-radius: 10px;
+        padding: 0.6rem 0.75rem;
+        background: var(--secondary-background-color);
+      }
+
+      .presc-top .kpi-card {
+        border: 1px solid rgba(49,51,63,0.12);
+        border-radius: 10px;
+        padding: 0.75rem 0.9rem;
+        background: var(--background-color);
+        margin-bottom: 0.4rem;
+      }
+
+      .presc-top .kpi-title {
+        font-size: 0.85rem;
+        color: var(--secondary-text-color);
+        margin: 0 0 0.15rem 0;
+      }
+
+      .presc-top .kpi-value {
+        font-weight: 600;
+        font-size: 1.3rem;
+        line-height: 1.2;
+        margin: 0 0 0.1rem 0;
+      }
+
+      .presc-top .kpi-foot {
+        color: var(--secondary-text-color);
+        font-size: 0.8rem;
+        margin: 0;
+      }
+
+      /* Optional sticky left side */
+      @media (min-width: 768px) {
+        .presc-top .sticky-col {
+          position: sticky;
+          top: 3.5rem;
+        }
+      }
+    </style>
+    """
+
+    st.markdown(top_css, unsafe_allow_html=True)
+    st.markdown('<div class="presc-top">', unsafe_allow_html=True)
+
+    # ---------- Heading ----------
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
 
+    # ---------- Data prep ----------
     if df_prescriptive_raw is None:
         st.error(f"Prescriptive dataset failed to load: {prescriptive_load_error}")
         st.stop()
 
-    # Prepare + validate
     try:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
     except Exception as e:
@@ -739,92 +798,83 @@ with tab6:
         st.write("Columns found:", list(df_prescriptive_raw.columns))
         st.stop()
 
-    # Drop no_change by default
     dfp = dfp[dfp["best_action"] != "no_change"].copy()
 
-    # Optional alignment with partner corridor selection (global)
     if selected_street not in ["All Corridors", "--- Full Street List ---"]:
         dfp = dfp[dfp["address"].str.contains(selected_street, case=False, na=False)].copy()
 
     if dfp.empty:
         st.warning("No prescriptive records match the current corridor selection. Try 'All Corridors'.")
+        st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
     all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
 
-    # ===== Styling for top section (filters + vertical KPIs) =====
-    st.markdown("""
-    <style>
-      .left-panel {
-        border: 1px solid rgba(49,51,63,0.12);
-        border-radius: 10px;
-        padding: 0.75rem;
-        background: var(--secondary-background-color);
-      }
-      .kpi-card {
-        border: 1px solid rgba(49,51,63,0.12);
-        border-radius: 10px;
-        padding: 0.9rem 1rem;
-        background: var(--background-color);
-        margin-bottom: 0.75rem;
-      }
-      .kpi-title { font-size: 0.85rem; color: var(--secondary-text-color); margin-bottom: 0.2rem; }
-      .kpi-value { font-weight: 600; font-size: 1.35rem; line-height: 1.2; margin-bottom: 0.25rem; }
-      .kpi-foot { color: var(--secondary-text-color); font-size: 0.8rem; }
+    # =======================================================
+    # TOP SECTION: Filters (left) + Vertical KPIs (right)
+    # =======================================================
+    colL, colR = st.columns([3, 2], gap="small")   # wider filter panel!
 
-      /* Optional: make left filters sticky for long pages (adjust top for your app header) */
-      @media (min-width: 768px) {
-        .sticky-col { position: sticky; top: 4rem; }
-      }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # ========= TOP SECTION: Filters (L) + Vertical KPIs (R) =========
-    # Keep this in columns so the top section is a neat two-panel header
-    colL, colR = st.columns([1, 2], gap="large")
-
-    # --- LEFT: vertical filters for this tab ---
+    # ---------- LEFT: Filters ----------
     with colL:
         st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
+
         st.markdown("#### Filters")
 
         selected_actions = st.multiselect(
             "Recommended action",
             options=all_actions,
             default=all_actions,
-            key="presc_actions",
+            key="presc_actions"
         )
-        top_n = st.slider("Top N locations", min_value=10, max_value=300, value=50, step=10, key="presc_topn")
 
-        # Advanced / optional filters
+        top_n = st.slider(
+            "Top N locations",
+            min_value=10,
+            max_value=300,
+            value=50,
+            step=10,
+            key="presc_topn"
+        )
+
+        # Optional additional filters
         with st.expander("More filters"):
             if "severity" in dfp.columns:
                 _sevs = sorted(dfp["severity"].dropna().unique().tolist())
                 st.multiselect("Severity", _sevs, key="presc_severity")
+
             if "district" in dfp.columns:
                 _dists = sorted(dfp["district"].dropna().unique().tolist())
                 st.multiselect("District", _dists, key="presc_district")
 
         st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
+
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Compute filtered frame from left-panel selections
+    # ---------- Apply filters ----------
     dfp_f = dfp[dfp["best_action"].isin(st.session_state.get("presc_actions", all_actions))].copy()
-    if "presc_severity" in st.session_state and st.session_state["presc_severity"]:
+
+    if st.session_state.get("presc_severity"):
         if "severity" in dfp_f.columns:
             dfp_f = dfp_f[dfp_f["severity"].isin(st.session_state["presc_severity"])]
-    if "presc_district" in st.session_state and st.session_state["presc_district"]:
+
+    if st.session_state.get("presc_district"):
         if "district" in dfp_f.columns:
             dfp_f = dfp_f[dfp_f["district"].isin(st.session_state["presc_district"])]
 
     if dfp_f.empty:
         st.warning("No data matches your filters. Select more options.")
+        st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
-    df_topn = dfp_f.sort_values("expected_reduction_amount", ascending=False).head(st.session_state["presc_topn"])
+    df_topn = (
+        dfp_f.sort_values("expected_reduction_amount", ascending=False)
+        .head(st.session_state["presc_topn"])
+    )
 
-    # --- RIGHT: three KPIs stacked vertically ---
+    # ---------- RIGHT: Vertical KPI Cards ----------
     with colR:
+
         def _kpi_card(title, value, foot=None):
             st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
             st.markdown(f'<div class="kpi-title">{title}</div>', unsafe_allow_html=True)
@@ -833,43 +883,3 @@ with tab6:
                 st.markdown(f'<div class="kpi-foot">{foot}</div>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # Calculate KPIs from df_topn (adjust column names if needed)
-        total_reduction = float(df_topn["expected_reduction_amount"].sum())
-
-        median_pct_display = "—"
-        if "pct_reduction" in df_topn.columns:
-            pct_series = df_topn["pct_reduction"]
-            if pct_series.max() > 1.0:
-                pct_series = pct_series / 100.0
-            median_pct_display = f"{float(pct_series.median()):.1%}"
-
-        locations_display = f"{len(df_topn):,}"
-
-        _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}")
-        _kpi_card("Median % Reduction", median_pct_display)
-        _kpi_card("Locations in Scope", locations_display)
-
-    # ========= FULL-WIDTH CONTENT AREA (after the top section) =========
-    st.divider()  # visually separates the top section from full-width content
-
-    st.subheader(f"Impact map (Top {st.session_state['presc_topn']} | color = action)")
-    build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
-    st.divider()
-
-    st.subheader("Action portfolio summary")
-    action_bars(dfp_f)
-    st.divider()
-
-    ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
-
-    with st.expander("Notes & tips"):
-        st.markdown(
-            """
-            **Map encoding**
-            - **Color**: `best_action`
-
-            **Percent normalization**
-            - If `pct_reduction` is 0–100, it is converted to 0–1 automatically.
-            - If it's already 0–1, it stays as-is.
-            """
-        )
