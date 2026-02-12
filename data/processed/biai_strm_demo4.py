@@ -414,7 +414,6 @@ def build_map(df_in: pd.DataFrame, top_n: int, all_actions: list):
             opacity=0.85,               # ✅ trace-level opacity
             marker=dict(line=dict(width=1, color="rgba(20,20,20,0.9)"))
         )
-    )
 
     # Hovertemplate (matches your pydeck tooltip content/order)
     hovertemplate = (
