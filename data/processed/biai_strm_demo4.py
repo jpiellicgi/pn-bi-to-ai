@@ -283,14 +283,14 @@ with tab2:
 
 with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
-    r1c1, r1c2, r1c3 = st.columns(3) #removed r1c1 for testing
+    r1c1, r1c2, r1c3 = st.columns(3) 
     with r1c1:
         fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r, title='Accident Severity Breakdown')
         fig_pie.update_layout(
             height=450, 
             width=500,
             legend=dict(
-                x=0.85,          
+                x=0.85,        
                 y=0.5
                 )   
             )
@@ -320,7 +320,8 @@ with tab3:
         fig_avg_cost_speed= px.bar(df_avg_cost_speed, x="Speed_Bin", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
             title= "Average Estimated Cost by Speed Bin",labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"},                            
             color_continuous_scale="Purples", text_auto=".2s")
-        st.plotly_chart(fig_avg_cost_speed)
+        st.plotly_chart(fig_avg_cost_speed)  
+
 with tab4:
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
     st.plotly_chart(px.density_heatmap(heat_df, x="HOUR", y="DAY_NAME", z="Count", color_continuous_scale="Purples"), use_container_width=True)
