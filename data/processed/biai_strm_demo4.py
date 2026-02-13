@@ -253,7 +253,7 @@ with st.sidebar:
 df = df_raw1[df_raw1["Year"].isin(selected_years)]
 if selected_street != "All Corridors":
     df = df[df["rpt_street_name"] == selected_street]
-        current_focus = selected_street
+    current_focus = selected_street
 else:
     current_focus = "Austin District (Full View)"
 
