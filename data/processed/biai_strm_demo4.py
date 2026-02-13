@@ -161,15 +161,57 @@ def prepare_prescriptive_df(df_prescriptive):
     df["ai_rationale_short"] = df["ai_rationale"].astype(str).map(lambda x: compact_text(x, 160))
     return df
 
-def build_map(df, top_n, all_actions):
+# def build_map(df, top_n, all_actions):
+#     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+#     ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}
+#     df_map["color"] = df_map["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
+#     st.pydeck_chart(pdk.Deck(
+#         layers=[pdk.Layer("ScatterplotLayer", data=df_map, get_position="[longitude, latitude]", get_fill_color="color", get_radius=100, pickable=True)],
+#         initial_view_state=pdk.ViewState(latitude=df_map["latitude"].mean(), longitude=df_map["longitude"].mean(), zoom=10),
+#         map_style="mapbox://styles/mapbox/streets-v12"
+#     ))
+def build_map(df, top_n=50, all_actions=None):
+    # Sort and take top N
     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-    ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}
-    df_map["color"] = df_map["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
-    st.pydeck_chart(pdk.Deck(
-        layers=[pdk.Layer("ScatterplotLayer", data=df_map, get_position="[longitude, latitude]", get_fill_color="color", get_radius=100, pickable=True)],
-        initial_view_state=pdk.ViewState(latitude=df_map["latitude"].mean(), longitude=df_map["longitude"].mean(), zoom=10),
-        map_style="mapbox://styles/mapbox/streets-v12"
-    ))
+
+    # Legend/category order
+    if all_actions is None:
+        all_actions = list(df_map["best_action"].dropna().unique())
+
+    # Color mapping (fallback to gray if missing)
+    color_map = {a: ACTION_COLORS.get(a, DEFAULT_COLOR) for a in all_actions}
+
+    # Center map on data
+    center_lat = df_map["latitude"].mean()
+    center_lon = df_map["longitude"].mean()
+
+    fig = px.scatter_mapbox(
+        df_map,
+        lat="latitude",
+        lon="longitude",
+        color="best_action",
+        color_discrete_map=color_map,
+        category_orders={"best_action": all_actions},
+        hover_name="best_action",
+        hover_data={
+            "expected_reduction_amount": ":,.0f",
+            "latitude": False,
+            "longitude": False,
+        },
+        zoom=10,
+        center=dict(lat=center_lat, lon=center_lon),
+        height=550,
+    )
+
+    # Marker and layout tweaks
+    fig.update_traces(marker=dict(size=10, opacity=0.9))
+    fig.update_layout(
+        mapbox_style="open-street-map",  # <- no Mapbox token required
+        margin=dict(l=0, r=0, t=0, b=0),
+        legend_title_text="Recommended action",
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 def action_bars(df):
     agg = df.groupby("best_action").agg(total_reduction=("expected_reduction_amount", "sum"), locations=("location_id", "count")).reset_index()
