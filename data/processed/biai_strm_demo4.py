@@ -245,20 +245,24 @@ with st.sidebar:
     st.title("Global Filters")
     all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
     selected_years = st.multiselect("📅 Fiscal Years:", all_years, default=all_years[-4:])
-    top_10 = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
+    top_10_names = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
     selected_street = st.selectbox("📍 Corridor:", ["All Corridors"] + top_10)
+    corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
 
 # Filter Logic
 df = df_raw1[df_raw1["Year"].isin(selected_years)]
 if selected_street != "All Corridors":
     df = df[df["rpt_street_name"] == selected_street]
+        current_focus = selected_street
+else:
+    current_focus = "Austin District (Full View)"
 
 # --- MAIN DASHBOARD AREA ---
 if LOGO_PATH:
     st.image(LOGO_PATH, width=180)
 
 st.title("Safety Intelligence Dashboard")
-st.caption(f"Analyzing: **{selected_street}**")
+st.caption(f"Analyzing: **{current_focus}**")
 
 k1, k2, k3 = st.columns(3)
 k1.metric("Crash Volume", f"{len(df):,}")
