@@ -288,8 +288,8 @@ with tab1:
         fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost", 
                              color_continuous_scale="Purples", text_auto=".2s")
         fig_cost_bar.update_layout(
-            height=300, 
-            width=400,
+            height=500, 
+            width=600,
             margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
             )
         st.plotly_chart(fig_cost_bar)
@@ -300,8 +300,8 @@ with tab1:
         fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes", color="Number of Crashes", 
         color_continuous_scale="Purples", text_auto=".2s")
         fig_crash_count.update_layout(
-            height=300, 
-            width=400,
+            height=500, 
+            width=600,
             margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
             )
         st.plotly_chart(fig_crash_count)
