@@ -33,8 +33,6 @@ CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
 CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 
-MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
-
 # --- 3. SMART ASSET LOADER ---
 def get_cgi_logo():
     """
@@ -161,15 +159,6 @@ def prepare_prescriptive_df(df_prescriptive):
     df["ai_rationale_short"] = df["ai_rationale"].astype(str).map(lambda x: compact_text(x, 160))
     return df
 
-# def build_map(df, top_n, all_actions):
-#     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-#     ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}
-#     df_map["color"] = df_map["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
-#     st.pydeck_chart(pdk.Deck(
-#         layers=[pdk.Layer("ScatterplotLayer", data=df_map, get_position="[longitude, latitude]", get_fill_color="color", get_radius=100, pickable=True)],
-#         initial_view_state=pdk.ViewState(latitude=df_map["latitude"].mean(), longitude=df_map["longitude"].mean(), zoom=10),
-#         map_style="mapbox://styles/mapbox/streets-v12"
-#     ))
 def build_map(df, top_n=50, all_actions=None):
     # Sort and take top N
     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
