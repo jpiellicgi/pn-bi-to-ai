@@ -307,7 +307,46 @@ with tab1:
         st.plotly_chart(fig_crash_count)
 
 with tab2:
-    st.plotly_chart(px.density_mapbox(df, lat="latitude", lon="longitude", z="Estimated Total Comprehensive Cost", radius=12, zoom=10, mapbox_style="open-street-map", color_continuous_scale="Purples"), use_container_width=True)
+    col_list, col_map = st.columns([1, 2])
+    with col_list:
+        st.subheader("🔥 Top 10 Risk Corridors")
+        risk_df = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).reset_index()
+        risk_df.columns = ["Street", "Cost"]
+        bar_colors = ["#4B0082" if s == selected_street else "#D8BFD8" for s in risk_df["Street"]]
+        fig_bar = px.bar(risk_df, x="Cost", y="Street", orientation="h", template="plotly_white")
+        fig_bar.update_traces(marker_color=bar_colors)
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    with col_map:
+        map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
+        lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
+
+        if map_type == "Economic Heatmap":
+            fig_m = px.density_mapbox(
+                df,
+                lat="latitude",
+                lon="longitude",
+                z="Estimated Total Comprehensive Cost",
+                radius=12,
+                center=dict(lat=lat_c, lon=lon_c),
+                zoom=10,
+                mapbox_style="open-street-map",
+                color_continuous_scale="Purples",
+            )
+        else:
+            fig_m = px.scatter_mapbox(
+                df,
+                lat="latitude",
+                lon="longitude",
+                color="Severity_Label",
+                size="marker_size",
+                center=dict(lat=lat_c, lon=lon_c),
+                zoom=10,
+                mapbox_style="open-street-map",
+            )
+
+        fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
+        st.plotly_chart(fig_m, use_container_width=True)    
 
 with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
