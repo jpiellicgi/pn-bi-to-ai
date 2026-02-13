@@ -428,14 +428,43 @@ with tab4:
 
 
 with tab5:
-    modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle"]
+    st.subheader("Economic Impact by Transportation Type")
+    st.write("##### This page shows the cost of accidents in which a pedestrian, bicycle, or motorcycle were involved.")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", "Commercial Veh"]
     mode_stats = []
+
     for m in modes:
         subset = df[df[m] == 1]
         if not subset.empty:
-            mode_stats.append({"Mode": m, "Average Cost": subset["Estimated Total Comprehensive Cost"].mean()})
+            avg_cost = subset["Estimated Total Comprehensive Cost"].mean()
+            total_impact = subset["Estimated Total Comprehensive Cost"].sum()
+            mode_stats.append({"Mode": m, "Average Cost": avg_cost, "Total Impact": total_impact, "Count": len(subset)})
+
     if mode_stats:
-        st.plotly_chart(px.bar(pd.DataFrame(mode_stats), x="Mode", y="Average Cost", color_continuous_scale="Purples"), use_container_width=True)
+        mode_df = pd.DataFrame(mode_stats)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.write("**Average Economic Cost per Incident**")
+            fig_avg = px.bar(mode_df, x="Mode", y="Average Cost", color="Average Cost",
+                             color_continuous_scale="Purples", text_auto=".2s")
+            st.plotly_chart(fig_avg, use_container_width=True)
+
+        with c2:
+            st.write("**Total Economic Burden (Sum)**")
+            fig_total = px.pie(mode_df, names="Mode", values="Total Impact",
+                               color_discrete_sequence=px.colors.sequential.Purples_r)
+            st.plotly_chart(fig_total, use_container_width=True)
+
+        st.markdown("---")
+        st.write("**Mode Vulnerability Matrix (Volume vs. Average Cost)**")
+        fig_bubble = px.scatter(mode_df, x="Count", y="Average Cost", size="Total Impact",
+                                color="Mode", hover_name="Mode", size_max=60)
+        st.plotly_chart(fig_bubble, use_container_width=True)
+    else:
+        st.warning("No Mode-specific data found in the current selection.")
 
 with tab6:
     if df_prescriptive_raw is not None:
