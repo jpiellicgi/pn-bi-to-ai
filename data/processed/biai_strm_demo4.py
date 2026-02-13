@@ -270,7 +270,7 @@ k2.metric("Lives Lost", int(df["death_cnt"].sum()))
 k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 
 # --- TABS ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🚶Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
 
 with tab1:
     st.write("##### The top predictors and prescriptive actions were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.")
@@ -390,6 +390,7 @@ with tab3:
         st.plotly_chart(fig_avg_cost_speed)  
 
 with tab4:
+    st.subheader(f"Temporal Patterns: {current_focus}")
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
     fig_heat = px.density_heatmap(
         heat_df,
@@ -428,7 +429,8 @@ with tab4:
 
 
 with tab5:
-    st.subheader("Economic Impact by Transportation Type")
+    st.subheader(f"Economic Impact by Transportation Type: {current_focus}")
+    #st.subheader(f"Crash Risk Profile: {current_focus}")
     st.write("##### This page shows the cost of accidents in which a pedestrian, bicycle, or motorcycle were involved.")
     st.markdown("<br>", unsafe_allow_html=True)
 
