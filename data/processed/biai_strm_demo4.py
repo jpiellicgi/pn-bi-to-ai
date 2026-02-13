@@ -179,7 +179,7 @@ def build_map(df, top_n=50, all_actions=None):
         all_actions = list(df_map["best_action"].dropna().unique())
 
     # Color mapping (fallback to gray if missing)
-    ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}
+    ACTION_COLORS = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}
     color_map = {a: ACTION_COLORS.get(a, DEFAULT_COLOR) for a in all_actions}
 
     # Center map on data
