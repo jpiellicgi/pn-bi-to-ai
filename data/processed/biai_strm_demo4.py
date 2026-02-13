@@ -62,11 +62,19 @@ LOGO_PATH = get_cgi_logo()
 # ----------------------------
 @st.cache_data(show_spinner=False)
 def read_csv_url(url: str) -> pd.DataFrame:
+    """
+    Robustly fetch CSV from a URL.
+    Fails clearly if the remote file is empty or non-CSV.
+    """
     r = requests.get(url, timeout=60)
     if r.status_code != 200:
         raise FileNotFoundError(f"HTTP {r.status_code} fetching {url}")
+
+    # If tiny response, it's effectively empty (common cause of 'No columns to parse')
     if len(r.content) <= 10:
-        raise ValueError(f"Remote file is too small. URL: {url}")
+        raise ValueError(f"Remote file is too small ({len(r.content)} bytes). URL: {url}")
+
+    # Let pandas parse from bytes
     return pd.read_csv(pd.io.common.BytesIO(r.content), low_memory=False)
 
 # ----------------------------
@@ -88,7 +96,7 @@ def load_partner_data(url: str) -> pd.DataFrame:
     sev_map = {1: "Fatal", 2: "Serious Injury", 3: "Minor Injury", 4: "Possible Injury", 0: "No Injury", 5: "Unknown"}
     df["Severity_Label"] = df["crash_sev_id"].map(sev_map)
 
-    cols_to_fix = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost", "death_cnt"]
+    cols_to_fix = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost"]
     for col in cols_to_fix:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
