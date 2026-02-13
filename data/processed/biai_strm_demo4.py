@@ -246,7 +246,7 @@ with st.sidebar:
     all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
     selected_years = st.multiselect("📅 Fiscal Years:", all_years, default=all_years[-4:])
     top_10_names = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
-    selected_street = st.selectbox("📍 Corridor:", ["All Corridors"] + top_10)
+    selected_street = st.selectbox("📍 Corridor:", ["All Corridors"] + top_10_names)
     corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
 
 # Filter Logic
