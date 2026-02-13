@@ -391,7 +391,41 @@ with tab3:
 
 with tab4:
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
-    st.plotly_chart(px.density_heatmap(heat_df, x="HOUR", y="DAY_NAME", z="Count", color_continuous_scale="Purples"), use_container_width=True)
+    fig_heat = px.density_heatmap(
+        heat_df,
+        x="HOUR",
+        y="DAY_NAME",
+        z="Count",
+        title= "Number of Accidents by Day and Hour",
+        color_continuous_scale="Purples",
+        category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
+    )
+    st.plotly_chart(fig_heat, use_container_width=True)
+
+    #Average cost by speed bin
+    df_avg_cost_hour= df.groupby("HOUR")["Estimated Total Comprehensive Cost"].mean().reset_index()
+    fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
+        title= "Average Estimated Cost by Hour",                            
+        color_continuous_scale="Purples", text_auto=".2s")
+    st.plotly_chart(fig_avg_cost_hour)
+
+    #Severity Breakdown by Hour
+    df_hour_severity= df.groupby(["HOUR", "Severity_Label"]).size().reset_index(name="Accident_Count")
+    fig_bar = px.bar(
+        df_hour_severity,
+        x="HOUR",
+        y="Accident_Count",
+        color="Severity_Label",
+        title="Number of Accidents by Hour and Severity",
+        labels={"Accident_Count": "Number of Accidents", "Severity_Label": "Severity Label"},
+        # This ensures the bars are stacked rather than grouped
+        barmode="stack",
+        # Optional: Define a specific order for the severity levels in the legend
+        category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+        color_discrete_sequence=px.colors.sequential.Purples_r
+    )
+    st.plotly_chart(fig_bar, use_container_width=True)
+
 
 with tab5:
     modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle"]
