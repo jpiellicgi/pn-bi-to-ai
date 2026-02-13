@@ -273,10 +273,38 @@ k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
 
 with tab1:
-    st.write("##### Top predictors determined through a random forest model trained on Austin crash data.")
-    st.image("https://raw.githubusercontent.com/jpiellicgi/pn-bi-to-ai/main/data/processed/BI%20to%20AI%20SHAP%20vf.png", width=800)
-    df_total_cost = df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
-    st.plotly_chart(px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", color_continuous_scale="Purples"), use_container_width=True)
+    st.write("##### The top predictors and prescriptive actions were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.")
+    shap_output, historicaloverview = st.columns([1, 2], gap="large")
+    with shap_output:
+        st.subheader("Top Predictors of Estimated Cost")
+        st.image("data/processed/BI to AI SHAP vf.png", width=800)
+        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. The most important features for predicting estimated cost were pedestrian involved, motorcycle involved, and crash speed limit.")
+    
+    with historicaloverview:
+        st.subheader("Historical Trends")
+
+        st.write("**Estimated Total Comprehensive Cost per Year**")
+        df_total_cost= df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
+        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost", 
+                             color_continuous_scale="Purples", text_auto=".2s")
+        fig_cost_bar.update_layout(
+            height=300, 
+            width=400,
+            margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+            )
+        st.plotly_chart(fig_cost_bar)
+
+        st.write("**Total Number of Crashes per Year**")
+        df_crash_count= df.groupby("Year")["ID"].count().reset_index()
+        df_crash_count.columns = ["Year", "Number of Crashes"]
+        fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes", color="Number of Crashes", 
+        color_continuous_scale="Purples", text_auto=".2s")
+        fig_crash_count.update_layout(
+            height=300, 
+            width=400,
+            margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+            )
+        st.plotly_chart(fig_crash_count)
 
 with tab2:
     st.plotly_chart(px.density_mapbox(df, lat="latitude", lon="longitude", z="Estimated Total Comprehensive Cost", radius=12, zoom=10, mapbox_style="open-street-map", color_continuous_scale="Purples"), use_container_width=True)
