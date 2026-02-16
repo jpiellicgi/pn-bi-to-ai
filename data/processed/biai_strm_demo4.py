@@ -230,10 +230,9 @@ def ranked_table_and_details(df, top_n):
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
     with left:
         st.subheader(f"Top {top_n} locations by expected reduction")
-        st.dataframe(ranked[["Address", "location_id", "best_action", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]], use_container_width=True)
+        st.dataframe(ranked["Address", "location_id", "best_action", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"], use_container_width=True)
 
     with right:
-        st.subheader("Location details")
         options = ranked[["address_short", "location_id"]].fillna("").copy()
         options["label"] = options["address_short"] + "  (" + options["location_id"] + ")"
         selected_label = st.selectbox("Select an address to see full rationale", options=options["label"].tolist(),index=0 if len(options) else None)
