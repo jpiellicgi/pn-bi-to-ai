@@ -232,12 +232,13 @@ def ranked_table_and_details(df, top_n):
         st.subheader(f"Top {top_n} locations by expected reduction")
         show_columns = ["Address", "location_id", "best_action", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]
         ranked_display = ranked[show_columns].rename(columns={"address": "Address","pct_reduction_norm": "pct_reduction","ai_rationale_short": "ai_rationale (short)",})
-        # ranked_display["expected_reduction_amount"] = ranked_display["expected_reduction_amount"].map(fmt_dollars)
-        # ranked_display["expected_cost_after_action"] = ranked_display["expected_cost_after_action"].map(fmt_dollars)
-        # ranked_display["pred_est_ttl_comp_cost"] = ranked_display["pred_est_ttl_comp_cost"].map(fmt_dollars)
+        ranked_display["expected_reduction_amount"] = ranked_display["expected_reduction_amount"].map(fmt_dollars)
+        ranked_display["expected_cost_after_action"] = ranked_display["expected_cost_after_action"].map(fmt_dollars)
+        ranked_display["pred_est_ttl_comp_cost"] = ranked_display["pred_est_ttl_comp_cost"].map(fmt_dollars)
         st.dataframe(ranked_display, use_container_width=True, hide_index=True)
         
     with right:
+        st.subheader("")
         options = ranked[["address_short", "location_id"]].fillna("").copy()
         options["label"] = options["address_short"] + "  (" + options["location_id"] + ")"
         selected_label = st.selectbox("Select an address to see full rationale", options=options["label"].tolist(),index=0 if len(options) else None)
@@ -247,10 +248,10 @@ def ranked_table_and_details(df, top_n):
             st.markdown(
                 f"""
                 **Action:** {row['best_action']}  
-                **Risk score:** `{row['pred_est_ttl_comp_cost']}`   
-                **Expected reduction:** `{row['expected_reduction_amount']}`  
+                **Risk score:** `{fmt_dollars(row['pred_est_ttl_comp_cost'])}`   
+                **Expected reduction:** `{fmt_dollars(row['expected_reduction_amount'])}`  
                 **% reduction:** {row['pct_reduction_norm'] * 100:.1f}%  
-                **Expected cost after action:** {row['expected_cost_after_action']}  
+                **Expected cost after action:** {fmt_dollars(row['expected_cost_after_action'])}  
                 """
             )
             st.markdown("**Rationale:**")
