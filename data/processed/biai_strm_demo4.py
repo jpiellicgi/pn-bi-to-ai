@@ -161,6 +161,7 @@ def prepare_prescriptive_df(df_prescriptive):
     df = df_prescriptive.copy()
     df = _coerce_numeric(df, ["latitude", "longitude", "pred_est_ttl_comp_cost", "expected_cost_after_action", "expected_reduction_amount", "pct_reduction"])
     df = df.dropna(subset=["latitude", "longitude"]).copy()
+    df = df[df["best_action"] != "no_change"].copy()
     df["pct_reduction_norm"] = normalize_pct_reduction(df["pct_reduction"])
     df["location_id"] = make_location_id(df)
     df["address_short"] = df["Address"].astype(str).map(lambda x: compact_text(x, 80))
