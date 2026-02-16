@@ -470,7 +470,6 @@ with tab5:
         st.warning("No Mode-specific data found in the current selection.")
 
 with tab6:
-    # ---------- Title ----------
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
     
@@ -478,6 +477,61 @@ with tab6:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
         if selected_street != "All Corridors":
             dfp = dfp[dfp["address_short"].str.contains(selected_street, case=False, na=False)]
+        # top layout: filters + KPIs
+        colL, colR = st.columns([3, 2], gap="small")
+
+        with colL:
+            st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
+    
+            selected_actions = st.multiselect(
+                "Recommended action",
+                options=all_actions,
+                default=all_actions,
+                key="presc_actions"
+            )
+    
+            top_n = st.slider(
+                "Top N locations",
+                min_value=10,
+                max_value=300,
+                value=50,
+                step=10,
+                key="presc_topn"
+            )
+    
+            with st.expander("More filters"):
+                if "severity" in dfp.columns:
+                    sevs = sorted(dfp["severity"].dropna().unique().tolist())
+                    st.multiselect("Severity", sevs, key="presc_severity")
+    
+                if "district" in dfp.columns:
+                    dists = sorted(dfp["district"].dropna().unique().tolist())
+                    st.multiselect("District", dists, key="presc_district")
+    
+            st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
+    
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            dfp_f = dfp[dfp["best_action"].isin(st.session_state.get("presc_actions", all_actions))].copy()
+        
+            if st.session_state.get("presc_severity"):
+                if "severity" in dfp_f.columns:
+                    dfp_f = dfp_f[dfp_f["severity"].isin(st.session_state["presc_severity"])]
+        
+            if st.session_state.get("presc_district"):
+                if "district" in dfp_f.columns:
+                    dfp_f = dfp_f[dfp_f["district"].isin(st.session_state["presc_district"])]
+        
+            if dfp_f.empty:
+                st.warning("No data matches your filters. Select more options.")
+                st.markdown('</div>', unsafe_allow_html=True)
+                st.stop()
+        
+            df_topn = (
+                dfp_f.sort_values("expected_reduction_amount", ascending=False)
+                .head(st.session_state["presc_topn"])
+            )
+            # end top layout
         build_map(dfp, 50, dfp["best_action"].unique())
         action_bars(dfp)
         ranked_table_and_details(dfp, 50)
