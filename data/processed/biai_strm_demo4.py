@@ -217,8 +217,10 @@ def build_map(df, top_n=50, all_actions=None):
 
     st.plotly_chart(fig, use_container_width=True)
 
-def action_bars(df):
-    agg = df.groupby("best_action").agg(total_reduction=("expected_reduction_amount", "sum"), locations=("location_id", "count")).reset_index()
+def action_bars(df,top_n=50):
+    # Sort and take top N
+    df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+    agg = df_bar.groupby("best_action").agg(total_reduction=("expected_reduction_amount", "sum"), locations=("location_id", "count")).reset_index()
     c1, c2 = st.columns(2)
     c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x="best_action:N", y="total_reduction:Q"), use_container_width=True)
     c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x="best_action:N", y="locations:Q"), use_container_width=True)
@@ -535,7 +537,7 @@ with tab6:
             )
             # end top layout
         build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
-        action_bars(dfp_f)
+        action_bars(dfp_f, top_n=st.session_state["presc_topn"])
         ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
     else:
         st.error("Prescriptive data unavailable.")
