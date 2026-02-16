@@ -469,6 +469,10 @@ with tab5:
         st.warning("No Mode-specific data found in the current selection.")
 
 with tab6:
+    # ---------- Title ----------
+    st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
+    st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
+    
     if df_prescriptive_raw is not None:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
         if selected_street != "All Corridors":
