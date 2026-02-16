@@ -509,7 +509,7 @@ with tab6:
         all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
         
         # top layout: filters + KPIs
-        colL, colR = st.columns([3, 2], gap="small")
+        colL, colR = st.columns([3, 2], gap="large")
 
         with colL:
             st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
