@@ -234,7 +234,7 @@ def ranked_table_and_details(df, top_n):
         # ranked_display["expected_reduction_amount"] = ranked_display["expected_reduction_amount"].map(fmt_dollars)
         # ranked_display["expected_cost_after_action"] = ranked_display["expected_cost_after_action"].map(fmt_dollars)
         # ranked_display["pred_est_ttl_comp_cost"] = ranked_display["pred_est_ttl_comp_cost"].map(fmt_dollars)
-        st.dataframe(ranked_display, use_container_width=True, hide_index=True)
+        st.dataframe(ranked, use_container_width=True, hide_index=True)
         
     with right:
         options = ranked[["address_short", "location_id"]].fillna("").copy()
