@@ -234,8 +234,8 @@ def ranked_table_and_details(df, top_n):
 
     with right:
         st.subheader("Location details")
-        options = ranked[["address", "location_id"]].fillna("").copy()
-        options["label"] = options["address"] + "  (" + options["location_id"] + ")"
+        options = ranked[["address_short", "location_id"]].fillna("").copy()
+        options["label"] = options["address_short"] + "  (" + options["location_id"] + ")"
         selected_label = st.selectbox("Select an address to see full rationale", options=options["label"].tolist(),index=0 if len(options) else None)
         if selected_label:
             selected_loc = options.loc[options["label"] == selected_label, "location_id"].iloc[0]
