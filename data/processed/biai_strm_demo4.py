@@ -562,6 +562,31 @@ with tab6:
                 dfp_f.sort_values("expected_reduction_amount", ascending=False)
                 .head(st.session_state["presc_topn"])
             )
+        with colR:
+            # KPI 1 — total expected reduction
+            total_reduction = float(df_topn["expected_reduction_amount"].sum())
+    
+            # KPI 2 — median pct reduction
+            if "pct_reduction" in df_topn.columns:
+                pct_series = df_topn["pct_reduction"]
+                if pct_series.max() > 1.0:
+                    pct_series = pct_series / 100.0
+                median_pct_display = f"{float(pct_series.median()):.1%}"
+            else:
+                median_pct_display = "—"
+    
+            # KPI 3 — number of top-N locations
+            locations_display = f"{len(df_topn):,}"
+           
+            with st.container():
+                st.metric("Value A", 123)
+                st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
+            
+                st.metric("Value B", 456)
+                st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
+            
+                st.metric("Value C", 789)
+
             # end top layout
         build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
         action_bars(dfp_f, top_n=st.session_state["presc_topn"])
