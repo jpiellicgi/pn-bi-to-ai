@@ -222,8 +222,8 @@ def action_bars(df,top_n=50):
     df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
     agg = df_bar.groupby("best_action").agg(total_reduction=("expected_reduction_amount", "sum"), locations=("location_id", "count")).reset_index()
     c1, c2 = st.columns(2)
-    c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x="best_action:N", y="total_reduction:Q"), use_container_width=True)
-    c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x="best_action:N", y="locations:Q"), use_container_width=True)
+    c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="total_reduction:Q"), use_container_width=True)
+    c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="locations:Q"), use_container_width=True)
 
 def ranked_table_and_details(df, top_n):
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
