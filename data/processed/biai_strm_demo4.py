@@ -477,6 +477,8 @@ with tab6:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
         if selected_street != "All Corridors":
             dfp = dfp[dfp["address_short"].str.contains(selected_street, case=False, na=False)]
+        all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
+        
         # top layout: filters + KPIs
         colL, colR = st.columns([3, 2], gap="small")
 
