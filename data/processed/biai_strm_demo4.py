@@ -534,8 +534,8 @@ with tab6:
                 .head(st.session_state["presc_topn"])
             )
             # end top layout
-        build_map(dfp, 50, dfp["best_action"].unique())
-        action_bars(dfp)
-        ranked_table_and_details(dfp, 50)
+        build_map(dfp_f, 50, dfp["best_action"].unique())
+        action_bars(dfp_f)
+        ranked_table_and_details(dfp_f, 50)
     else:
         st.error("Prescriptive data unavailable.")
