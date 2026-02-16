@@ -226,9 +226,31 @@ def action_bars(df,top_n=50):
     c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="locations:Q"), use_container_width=True)
 
 def ranked_table_and_details(df, top_n):
+    left, right = st.columns([1.35, 1])
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-    st.dataframe(ranked[["Address", "best_action", "expected_reduction_amount", "ai_rationale_short"]], use_container_width=True)
+    with left:
+        st.subheader(f"Top {top_n} locations by expected reduction")
+        st.dataframe(ranked[["Address", "location_id", "best_action", "expected_reduction_amount", "pct_reduction_amount","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]], use_container_width=True)
 
+    with right:
+        st.subheader("Location details")
+        options = ranked[["address", "location_id"]].fillna("").copy()
+        options["label"] = options["address"] + "  (" + options["location_id"] + ")"
+        selected_label = st.selectbox("Select an address to see full rationale", options=options["label"].tolist(),index=0 if len(options) else None)
+        if selected_label:
+            selected_loc = options.loc[options["label"] == selected_label, "location_id"].iloc[0]
+            row = df.loc[df["location_id"] == selected_loc].iloc[0]
+            st.markdown(
+                f"""
+                **Action:** {row['best_action']}  
+                **Risk score:** `{row['pred_est_ttl_comp_cost']}`   
+                **Expected reduction:** `{row['expected_reduction_amount']}`  
+                **% reduction:** {row['pct_reduction_norm'] * 100:.1f}%  
+                **Expected cost after action:** {row['expected_cost_after_action']}  
+                """
+            )
+            st.markdown("**Rationale:**")
+            st.write(str(row.get("ai_rationale", "")))
 # ----------------------------
 # Execution & UI
 # ----------------------------
