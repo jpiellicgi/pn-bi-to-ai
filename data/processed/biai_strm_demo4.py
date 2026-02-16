@@ -579,13 +579,13 @@ with tab6:
             locations_display = f"{len(df_topn):,}"
            
             with st.container():
-                st.metric("Value A", 123)
+                st.metric("Total Expected Reduction", f"{total_reduction:,.0f}")
                 st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
             
-                st.metric("Value B", 456)
+                st.metric("Median % Reduction", median_pct_display)
                 st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
             
-                st.metric("Value C", 789)
+                st.metric("Locations in Scope", locations_display)
 
             # end top layout
         build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
