@@ -480,8 +480,8 @@ with tab5:
         c1, c2 = st.columns(2)
         with c1:
             st.write("**Average Economic Cost per Crash**")
-            fig_avg = px.bar(mode_df, x="Mode", y="Average Cost", color="Average Cost",
-                             color_continuous_scale="Purples", text_auto=".2s")
+            fig_avg = px.bar(mode_df, x="Mode", y="Average Cost", text_auto=".2s")
+            fig_avg.update_traces(marker_color='#5236ab')
             st.plotly_chart(fig_avg, use_container_width=True)
 
         with c2:
