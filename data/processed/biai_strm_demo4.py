@@ -315,7 +315,7 @@ with tab1:
 
         st.write("**Estimated Total Comprehensive Cost per Year**")
         df_total_cost= df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
-        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", text_auto=".2s")
+        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost") #, text_auto=".2s")
         fig_cost_bar.update_layout(
             height=400, 
             width=800,
@@ -329,11 +329,11 @@ with tab1:
         st.write("**Total Number of Crashes per Year**")
         df_crash_count= df.groupby("Year")["ID"].count().reset_index()
         df_crash_count.columns = ["Year", "Number of Crashes"]
-        fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes", text_auto=".2s")
+        fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes") #  , text_auto=".2s")
         fig_crash_count.update_layout(
             height=400, 
             width=800,
-            margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
+            margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
             )
         fig_crash_count.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_crash_count)
