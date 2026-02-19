@@ -415,8 +415,8 @@ with tab3:
         #Average cost by speed bin
         df_avg_cost_speed= df.groupby("Speed_Bin")["Estimated Total Comprehensive Cost"].mean().reset_index()
         fig_avg_cost_speed= px.bar(df_avg_cost_speed, x="Speed_Bin", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
-            title= "Average Estimated Cost by Speed Bin",labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"},                            
-            color_continuous_scale="Purples", text_auto=".2s")
+            title= "Average Estimated Cost by Speed Bin",labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"}, text_auto=".2s")
+        fig_avg_cost_speed.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_avg_cost_speed)  
 
 with tab4:
