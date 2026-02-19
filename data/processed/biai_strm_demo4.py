@@ -443,8 +443,6 @@ with tab3:
             #color_discrete_sequence=px.colors.sequential.Purples_r
         )
         fig_bar.update_layout(
-            height=450, 
-            width=500,
             legend=dict(
                 x=0.85,        
                 y=0.5
