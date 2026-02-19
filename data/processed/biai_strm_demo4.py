@@ -486,6 +486,7 @@ with tab5:
             st.write("**Average Economic Cost per Crash**")
             fig_avg = px.bar(mode_df, x="Mode", y="Average Cost", text_auto=".2s")
             fig_avg.update_traces(marker_color='#5236ab')
+            fig_avg.update_layout(yaxis_tickprefix='$')
             st.plotly_chart(fig_avg, use_container_width=True)
 
         with c2:
@@ -498,6 +499,7 @@ with tab5:
         st.write("**Mode Vulnerability Matrix (Volume vs. Average Cost)**")
         fig_bubble = px.scatter(mode_df, x="Count", y="Average Cost", size="Total Impact",
                                 color="Mode", hover_name="Mode", size_max=60)
+        fig_bubble.update_layout(yaxis_tickprefix='$')
         st.plotly_chart(fig_bubble, use_container_width=True)
     else:
         st.warning("No Mode-specific data found in the current selection.")
