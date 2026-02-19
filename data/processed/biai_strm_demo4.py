@@ -322,6 +322,7 @@ with tab1:
             margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
             yaxis_tickprefix='$'
             )
+        fig_cost_bar.update_xaxes(type='category')
         fig_cost_bar.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_cost_bar)
 
