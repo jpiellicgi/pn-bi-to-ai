@@ -100,7 +100,8 @@ def load_partner_data(url: str) -> pd.DataFrame:
         'Serious Injury': '#e31937',
         'Minor Injury': '#ff6a00',
         'Possible Injury': '#f1a425',
-        'No Injury': '#128354'
+        'No Injury': '#128354',
+        'No Injury': '#cccccc'
         }
 
 
