@@ -315,8 +315,7 @@ with tab1:
 
         st.write("**Estimated Total Comprehensive Cost per Year**")
         df_total_cost= df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
-        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost", 
-                             color_continuous_scale="Purples", text_auto=".2s")
+        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost", text_auto=".2s")
         fig_cost_bar.update_layout(
             height=400, 
             width=800,
