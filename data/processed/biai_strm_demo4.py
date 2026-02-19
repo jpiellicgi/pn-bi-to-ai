@@ -320,9 +320,7 @@ with tab1:
             height=400, 
             width=800,
             margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
-            tickformat= ","
-            #yaxis_tickprefix='$',
-            #yaxis_tickformat=',.0f'
+            yaxis_tickprefix='$'
             )
         fig_cost_bar.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_cost_bar)
