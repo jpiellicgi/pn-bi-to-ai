@@ -95,15 +95,6 @@ def load_partner_data(url: str) -> pd.DataFrame:
 
     sev_map = {1: "Fatal", 2: "Serious Injury", 3: "Minor Injury", 4: "Possible Injury", 0: "No Injury", 5: "Unknown"}
     df["Severity_Label"] = df["crash_sev_id"].map(sev_map)
-    severity_color_map = {
-        'Fatal': '#991f3d',
-        'Serious Injury': '#e31937',
-        'Minor Injury': '#ff6a00',
-        'Possible Injury': '#f1a425',
-        'No Injury': '#128354',
-        'No Injury': '#cccccc'
-        }
-
 
     cols_to_fix = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost"]
     for col in cols_to_fix:
@@ -409,6 +400,14 @@ with tab3:
     
     with r1c2:
         #Crashes by Speed Limit and Severity
+        severity_color_map = {
+            'Fatal': '#991f3d',
+            'Serious Injury': '#e31937',
+            'Minor Injury': '#ff6a00',
+            'Possible Injury': '#f1a425',
+            'No Injury': '#128354',
+            'No Injury': '#cccccc'
+            }
         df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"]).size().reset_index(name="Accident_Count")
         fig_bar = px.bar(
             df_speed_severity,
