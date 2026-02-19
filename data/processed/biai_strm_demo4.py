@@ -396,7 +396,15 @@ with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
     r1c1, r1c2, r1c3 = st.columns(3) 
     with r1c1:
-        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r, title='Crash Severity Breakdown')
+        severity_color_map = {
+            'Fatal': '#991f3d',
+            'Serious Injury': '#e31937',
+            'Minor Injury': '#ff6a00',
+            'Possible Injury': '#f1a425',
+            'No Injury': '#128354',
+            'No Injury': '#cccccc'
+            }
+        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_map= severity_color_map, category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]}, title='Crash Severity Breakdown')
         fig_pie.update_layout(
             height=450, 
             width=500,
