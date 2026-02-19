@@ -435,9 +435,8 @@ with tab4:
 
     #Average cost by speed bin
     df_avg_cost_hour= df.groupby("HOUR")["Estimated Total Comprehensive Cost"].mean().reset_index()
-    fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
-        title= "Average Estimated Cost by Hour",                            
-        color_continuous_scale="Purples", text_auto=".2s")
+    fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", title= "Average Estimated Cost by Hour", text_auto=".2s")
+    fig_avg_cost_hour.update_traces(marker_color='#5236ab')
     st.plotly_chart(fig_avg_cost_hour)
 
     #Severity Breakdown by Hour
