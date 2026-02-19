@@ -357,7 +357,7 @@ with tab2:
             'Minor Injury': '#ff6a00',
             'Possible Injury': '#f1a425',
             'No Injury': '#128354',
-            'No Injury': '#cccccc'
+            'Unknown': '#cccccc'
             }
         map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
         lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
