@@ -409,6 +409,7 @@ with tab3:
         fig_pie.update_layout(
             height=450, 
             width=500,
+            legend_title_text='Severity Label',
             legend=dict(
                 x=0.85,        
                 y=0.5
