@@ -327,7 +327,7 @@ with tab1:
         st.write("**Total Number of Crashes per Year**")
         df_crash_count= df.groupby("Year")["ID"].count().reset_index()
         df_crash_count.columns = ["Year", "Number of Crashes"]
-        fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes", color="Number of Crashes", text_auto=".2s")
+        fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes", text_auto=".2s")
         fig_crash_count.update_layout(
             height=400, 
             width=800,
