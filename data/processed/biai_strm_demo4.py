@@ -404,7 +404,7 @@ with tab3:
             'No Injury': '#128354',
             'Unknown': '#cccccc'
             }
-        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_map= severity_color_map, category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color= "Severity_Label", color_discrete_map=severity_color_map, category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
                          labels={"Severity_Label": "Severity Label"}, title='Crash Severity Breakdown')
         fig_pie.update_layout(
             height=450, 
