@@ -381,8 +381,8 @@ with tab2:
                 lat="latitude",
                 lon="longitude",
                 color="Severity_Label",
-                color_discrete_map= severity_color_map,
-                category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+                #color_discrete_map= severity_color_map,
+                #category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
                 size="marker_size",
                 center=dict(lat=lat_c, lon=lon_c),
                 zoom=10,
@@ -421,7 +421,8 @@ with tab3:
             barmode="stack",
             # Optional: Define a specific order for the severity levels in the legend
             category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
-            color_discrete_sequence=px.colors.sequential.Purples_r
+            color_discrete_map=severity_color_map
+            #color_discrete_sequence=px.colors.sequential.Purples_r
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
