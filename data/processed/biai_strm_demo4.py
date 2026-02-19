@@ -308,7 +308,9 @@ with tab1:
     with shap_output:
         st.subheader("Top Predictors of Estimated Cost")
         st.image("data/processed/outputs/BI to AI SHAP vf.png", width=800)
-        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. The most important features for predicting estimated cost were pedestrian involved, motorcycle involved, and crash speed limit.")
+        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. This SHAP summary plot shows how each feature influences the model's predicted crash cost relative to the average. 
+        Features are ranked by importance (top = most impactful). Each dot represents an individual crash — red dots indicate a high feature value, blue dots indicate a low feature value. Dots to the right of center (positive SHAP) mean that feature increased 
+        the predicted cost; dots to the left (negative SHAP) mean it decreased the predicted cost. The three most influential predictors of estimated crash cost are pedestrian involved, motorcycle involved, and crash speed limit.")
     
     with historicaloverview:
         st.subheader("Historical Trends")
