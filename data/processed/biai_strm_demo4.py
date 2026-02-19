@@ -406,7 +406,7 @@ with tab3:
             'Minor Injury': '#ff6a00',
             'Possible Injury': '#f1a425',
             'No Injury': '#128354',
-            'No Injury': '#cccccc'
+            'Unknown': '#cccccc'
             }
         df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"]).size().reset_index(name="Accident_Count")
         fig_bar = px.bar(
