@@ -333,7 +333,7 @@ with tab1:
             width=800,
             margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
             )
-        fig_cost_bar.update_traces(marker_color='#5236ab')
+        fig_crash_count.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_crash_count)
 
 with tab2:
