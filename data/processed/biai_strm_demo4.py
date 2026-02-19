@@ -351,6 +351,14 @@ with tab2:
         st.plotly_chart(fig_bar, use_container_width=True)
 
     with col_map:
+        severity_color_map = {
+            'Fatal': '#991f3d',
+            'Serious Injury': '#e31937',
+            'Minor Injury': '#ff6a00',
+            'Possible Injury': '#f1a425',
+            'No Injury': '#128354',
+            'No Injury': '#cccccc'
+            }
         map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
         lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
 
@@ -372,8 +380,8 @@ with tab2:
                 lat="latitude",
                 lon="longitude",
                 color="Severity_Label",
-                #color_discrete_map= severity_color_map,
-                #category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+                color_discrete_map= severity_color_map,
+                category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
                 size="marker_size",
                 center=dict(lat=lat_c, lon=lon_c),
                 zoom=10,
