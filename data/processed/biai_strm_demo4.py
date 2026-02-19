@@ -382,7 +382,7 @@ with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
     r1c1, r1c2, r1c3 = st.columns(3) 
     with r1c1:
-        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r, title='Accident Severity Breakdown')
+        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r, title='Crash Severity Breakdown')
         fig_pie.update_layout(
             height=450, 
             width=500,
@@ -394,15 +394,15 @@ with tab3:
         st.plotly_chart(fig_pie, use_container_width=True)
     
     with r1c2:
-        #Accidents by Speed Limit and Severity
+        #Crashes by Speed Limit and Severity
         df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"]).size().reset_index(name="Accident_Count")
         fig_bar = px.bar(
             df_speed_severity,
             x="Speed_Bin",
             y="Accident_Count",
             color="Severity_Label",
-            title="Accidents by Speed Limit and Severity",
-            labels={"Accident_Count": "Number of Accidents", "Speed_Bin": "Speed Limit (mph)", "Severity_Label": "Severity Label"},
+            title="Crashes by Speed Limit and Severity",
+            labels={"Accident_Count": "Number of Crashes", "Speed_Bin": "Speed Limit (mph)", "Severity_Label": "Severity Label"},
             # This ensures the bars are stacked rather than grouped
             barmode="stack",
             # Optional: Define a specific order for the severity levels in the legend
@@ -427,7 +427,7 @@ with tab4:
         x="HOUR",
         y="DAY_NAME",
         z="Count",
-        title= "Number of Accidents by Day and Hour",
+        title= "Number of Crashes by Day and Hour",
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
@@ -447,8 +447,8 @@ with tab4:
         x="HOUR",
         y="Accident_Count",
         color="Severity_Label",
-        title="Number of Accidents by Hour and Severity",
-        labels={"Accident_Count": "Number of Accidents", "Severity_Label": "Severity Label"},
+        title="Number of Crashes by Hour and Severity",
+        labels={"Accident_Count": "Number of Crashes", "Severity_Label": "Severity Label"},
         # This ensures the bars are stacked rather than grouped
         barmode="stack",
         # Optional: Define a specific order for the severity levels in the legend
@@ -461,7 +461,7 @@ with tab4:
 with tab5:
     st.subheader(f"Economic Impact by Transportation Type: {current_focus}")
     #st.subheader(f"Crash Risk Profile: {current_focus}")
-    st.write("##### This page shows the cost of accidents in which a pedestrian, bicycle, or motorcycle were involved.")
+    st.write("##### This page shows the cost of crashes in which a pedestrian, bicycle, or motorcycle were involved.")
     st.markdown("<br>", unsafe_allow_html=True)
 
     modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", "Commercial Veh"]
@@ -479,7 +479,7 @@ with tab5:
 
         c1, c2 = st.columns(2)
         with c1:
-            st.write("**Average Economic Cost per Incident**")
+            st.write("**Average Economic Cost per Crash**")
             fig_avg = px.bar(mode_df, x="Mode", y="Average Cost", color="Average Cost",
                              color_continuous_scale="Purples", text_auto=".2s")
             st.plotly_chart(fig_avg, use_container_width=True)
