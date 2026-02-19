@@ -319,7 +319,9 @@ with tab1:
         fig_cost_bar.update_layout(
             height=400, 
             width=800,
-            margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+            margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
+            yaxis_tickprefix='$',
+            yaxis_tickformat=',.2f'
             )
         fig_cost_bar.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_cost_bar)
