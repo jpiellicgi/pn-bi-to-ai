@@ -481,6 +481,14 @@ with tab4:
     st.plotly_chart(fig_avg_cost_hour)
 
     #Severity Breakdown by Hour
+    severity_color_map = {
+        'Fatal': '#991f3d',
+        'Serious Injury': '#e31937',
+        'Minor Injury': '#ff6a00',
+        'Possible Injury': '#f1a425',
+        'No Injury': '#128354',
+        'Unknown': '#cccccc'
+        }
     df_hour_severity= df.groupby(["HOUR", "Severity_Label"]).size().reset_index(name="Accident_Count")
     fig_bar = px.bar(
         df_hour_severity,
@@ -493,7 +501,7 @@ with tab4:
         barmode="stack",
         # Optional: Define a specific order for the severity levels in the legend
         category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
-        color_discrete_sequence=px.colors.sequential.Purples_r
+        color_discrete_map= severity_color_map
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
