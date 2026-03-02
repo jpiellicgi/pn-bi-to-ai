@@ -322,7 +322,7 @@ with tab1:
             margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
             yaxis_tickprefix='$'
             )
-        avg_annual_cost_ref= df.groupby("Year")["Estimated Total Comprehensive Cost"].mean()
+        avg_annual_cost_ref= df_total_cost["Estimated Total Comprehensive Cost"].mean()
         fig_cost_bar.add_hline(
             y=avg_annual_cost_ref,
             line_width=3,
