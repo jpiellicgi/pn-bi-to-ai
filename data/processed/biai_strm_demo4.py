@@ -325,7 +325,7 @@ with tab1:
         avg_cost= df["Estimated Total Comprehensive Cost"].sum()
         year_count= df["Year"].count()
         avg_annual_cost_ref= avg_cost/year_count
-        fig.add_hline(
+        fig_cost_bar.add_hline(
             y=avg_annual_cost_ref,
             line_width=3,
             line_dash="dash",
