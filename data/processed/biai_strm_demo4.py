@@ -322,6 +322,15 @@ with tab1:
             margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
             yaxis_tickprefix='$'
             )
+        avg_cost_ref_value= df['Estimated Total Comprehensive Cost'].sum()/df["Year"].value_counts
+        fig.add_hline(
+            y=avg_cost_ref_value,
+            line_width=3,
+            line_dash="dash",
+            line_color="red",
+            annotation_text=f"Average Annual Cost: {reference_value:.2f}",
+            annotation_position="bottom right"
+        )
         fig_cost_bar.update_xaxes(type='category')
         fig_cost_bar.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_cost_bar)
