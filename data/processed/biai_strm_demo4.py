@@ -328,7 +328,7 @@ with tab1:
             line_width=3,
             line_dash="dash",
             line_color="red",
-            annotation_text=f"Average Annual Cost: ${avg_annual_cost_ref:.0f}",
+            annotation_text=f"Average Annual Cost: ${avg_annual_cost_ref:,.0f}",
             annotation_position="bottom right"
         )
         fig_cost_bar.update_xaxes(type='category')
