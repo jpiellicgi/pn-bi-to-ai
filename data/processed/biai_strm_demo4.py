@@ -476,7 +476,6 @@ with tab4:
         x="HOUR",
         y="DAY_NAME",
         z="Count",
-        nbinsx=8,
         title= "Number of Crashes by Day and Hour",
         labels={"DAY_NAME": "Day", "HOUR": "Hour", "Count": "Number of Crashes"},
         color_continuous_scale="Purples",
@@ -490,6 +489,14 @@ with tab4:
             tickvals = tick_vals,
             ticktext = tick_text
         )
+    )
+    fig_heat.update_traces(
+        xbins=dict(
+            start=0,
+            end=24,
+            size=3  # 24 hours / 8 bins = size of 3
+        ),
+        autobinx=False
     )
     st.plotly_chart(fig_heat, use_container_width=True)
 
