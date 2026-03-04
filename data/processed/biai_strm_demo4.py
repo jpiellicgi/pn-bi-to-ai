@@ -476,7 +476,6 @@ with tab4:
         x="HOUR",
         y="DAY_NAME",
         z="Count",
-        nbinsx=24,
         title= "Number of Crashes by Day and Hour",
         labels={"DAY_NAME": "Day", "HOUR": "Hour", "Count": "Number of Crashes"},
         color_continuous_scale="Purples",
