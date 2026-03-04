@@ -490,6 +490,7 @@ with tab4:
             ticktext = tick_text
         )
     )
+    #Defining number of bins
     fig_heat.update_traces(
         xbins=dict(
             start=0,
@@ -497,6 +498,17 @@ with tab4:
             size=3  # 24 hours / 8 bins = size of 3
         ),
         autobinx=False
+    )
+    #Defining hover label behavior
+    bin_labels = ['12 AM - 3 AM', '3 AM - 6 AM', '6 AM - 9 AM', '9 AM - 12 PM', '12 PM - 3 PM', '3 PM - 6 PM', '6 PM - 9 PM', '9 PM - 12 AM']
+    for i in range(0, 24, 3):
+        start = pd.to_datetime(i, format='%H').strftime('%-I %p')
+        end = pd.to_datetime(i+3, format='%H').strftime('%-I %p')
+        bin_labels.append(f"{start} - {end}")
+
+    fig_heat.update_traces(
+        customdata=np.tile(bin_labels, (len(df['day'].unique()), 1)),
+        hovertemplate="<b>Time:</b> %{customdata}<br><b>Day:</b> %{y}<br><b>Number of Crashes:</b> %{z}<extra></extra>"
     )
     st.plotly_chart(fig_heat, use_container_width=True)
 
