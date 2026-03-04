@@ -471,12 +471,12 @@ with tab3:
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
+    heat_df= pd.to_datetime(heat_df['HOUR'], format='%H')
     fig_heat = px.density_heatmap(
         heat_df,
         x="HOUR",
         y="DAY_NAME",
         z="Count",
-        nbinsx=5, 
         title= "Number of Crashes by Day and Hour",
         labels={"DAY_NAME": "Day", "HOUR": "Hour", "Count": "Number of Crashes"},
         color_continuous_scale="Purples",
