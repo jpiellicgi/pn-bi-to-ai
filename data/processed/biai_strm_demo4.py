@@ -471,16 +471,22 @@ with tab3:
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
+    hour_map = {h: pd.to_datetime(h, format='%H').strftime('%-I %p') for h in range(24)}
+    heat_df['PRETTY_HOUR'] = heat_df['HOUR'].map(hour_map)
     fig_heat = px.density_heatmap(
         heat_df,
         x="HOUR",
         y="DAY_NAME",
         z="Count",
+        custom_data=["PRETTY_HOUR"], 
         title= "Number of Crashes by Day and Hour",
         labels={"DAY_NAME": "Day", "HOUR": "Hour", "Count": "Number of Crashes"},
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
+    fig_heat.update_traces(
+        hovertemplate="<b>Time:</b> %{customdata[0]}<br><b>Day:</b> %{y}<br><b>Number of Crashes:</b> %{z}<extra></extra>"
+    )    
     tick_vals = [0, 3, 6, 9, 12, 15, 18, 21]
     tick_text = ["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
     fig_heat.update_layout(
@@ -499,12 +505,6 @@ with tab4:
         ),
         autobinx=False
     )
-    #Defining hover label behavior
-    fig_heat.update_traces(
-        hovertemplate="Time: %{customdata}<br>Day: %{y}<br>Count: %{z}<extra></extra>"
-    )
-    labels = [pd.to_datetime(h, format='%H').strftime('%-I %p') for h in range(25)]
-    fig_heat.update_traces(customdata=labels)
     st.plotly_chart(fig_heat, use_container_width=True)
 
     #Average cost by speed bin
