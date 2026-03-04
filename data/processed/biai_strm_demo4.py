@@ -481,8 +481,8 @@ with tab4:
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
-    tickvals=[0, 5, 10, 15, 20],
-    ticktext=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
+    tick_vals=[0, 5, 10, 15, 20],
+    tick_text=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
     fig_heat.update_layout(
     xaxis = dict(
         tickmode = 'array',
