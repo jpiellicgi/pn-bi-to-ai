@@ -510,11 +510,13 @@ with tab4:
         color="Severity_Label",
         title="Number of Crashes by Hour and Severity",
         labels={"Accident_Count": "Number of Crashes", "Severity_Label": "Severity Label"},
-        # This ensures the bars are stacked rather than grouped
         barmode="stack",
-        # Optional: Define a specific order for the severity levels in the legend
         category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
         color_discrete_map= severity_color_map
+    )
+    fig_bar.update_xaxes(
+        tickvals=[0, 5, 10, 15, 20],
+        ticktext=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
