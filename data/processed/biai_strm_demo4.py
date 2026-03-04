@@ -486,7 +486,7 @@ with tab4:
     df_avg_cost_hour= df.groupby("HOUR")["Estimated Total Comprehensive Cost"].mean().reset_index()
     fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", title= "Average Estimated Cost by Hour", text_auto=".2s")
     fig_avg_cost_hour.update_layout(yaxis_tickprefix='$')
-    fig_avg_cost_hour.update_axes(
+    fig_avg_cost_hour.update_xaxes(
         tickvals=[0, 5, 10, 15, 20],
         ticktext=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
     )
