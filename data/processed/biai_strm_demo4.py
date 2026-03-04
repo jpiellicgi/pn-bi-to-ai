@@ -480,16 +480,16 @@ with tab4:
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
-    fig_heat.update_axes(
-        tickvals=[0, 5, 10, 15, 20],
-        ticktext=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
-    )
     st.plotly_chart(fig_heat, use_container_width=True)
 
     #Average cost by speed bin
     df_avg_cost_hour= df.groupby("HOUR")["Estimated Total Comprehensive Cost"].mean().reset_index()
     fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", title= "Average Estimated Cost by Hour", text_auto=".2s")
     fig_avg_cost_hour.update_layout(yaxis_tickprefix='$')
+    fig_avg_cost_hour.update_axes(
+        tickvals=[0, 5, 10, 15, 20],
+        ticktext=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
+    )
     fig_avg_cost_hour.update_traces(marker_color='#5236ab')
     st.plotly_chart(fig_avg_cost_hour)
 
