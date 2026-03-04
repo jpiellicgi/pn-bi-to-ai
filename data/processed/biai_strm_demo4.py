@@ -482,15 +482,7 @@ with tab4:
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
-    tick_vals=[0, 5, 10, 15, 20],
-    tick_text=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
-    fig_heat.update_layout(
-        xaxis = dict(
-            tickmode = 'array',
-            tickvals = tick_vals,
-            ticktext = tick_text
-        )
-    )    
+    fig_heat.update_xaxes(tickformat="%-I %p")
     st.plotly_chart(fig_heat, use_container_width=True)
 
     #Average cost by speed bin
