@@ -471,7 +471,7 @@ with tab3:
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
-    heat_df= pd.to_datetime(heat_df['HOUR'], format='%H')
+    #heat_df= pd.to_datetime(heat_df['HOUR'], format='%H')
     fig_heat = px.density_heatmap(
         heat_df,
         x="HOUR",
@@ -482,7 +482,7 @@ with tab4:
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
-    fig_heat.update_xaxes(tickformat="%-I %p")
+    #fig_heat.update_xaxes(tickformat="%-I %p")
     st.plotly_chart(fig_heat, use_container_width=True)
 
     #Average cost by speed bin
