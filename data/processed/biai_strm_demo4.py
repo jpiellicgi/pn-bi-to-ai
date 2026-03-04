@@ -485,10 +485,10 @@ with tab4:
     tick_vals=[0, 5, 10, 15, 20],
     tick_text=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
     fig_heat.update_layout(
-    xaxis = dict(
-        tickmode = 'array',
-        tickvals = tick_vals,
-        ticktext = tick_text
+        xaxis = dict(
+            tickmode = 'array',
+            tickvals = tick_vals,
+            ticktext = tick_text
         )
     )    
     st.plotly_chart(fig_heat, use_container_width=True)
