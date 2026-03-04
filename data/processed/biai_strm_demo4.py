@@ -485,7 +485,7 @@ with tab4:
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
     fig_heat.update_traces(
-        hovertemplate="<b>Time:</b> %{customdata[0]}<br><b>Day:</b> %{y}<br><b>Number of Crashes:</b> %{z}<extra></extra>"
+        hovertemplate="<b>Time:</b> %{customdata[0]}<br><b>Day:</b> %{y}<br><b>Crashes:</b> %{z}<extra></extra>"
     )    
     tick_vals = [0, 3, 6, 9, 12, 15, 18, 21]
     tick_text = ["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
