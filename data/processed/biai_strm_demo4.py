@@ -500,17 +500,11 @@ with tab4:
         autobinx=False
     )
     #Defining hover label behavior
-    fig.update_traces(
+    fig_heat.update_traces(
         hovertemplate="Time: %{customdata}<br>Day: %{y}<br>Count: %{z}<extra></extra>"
     )
-    
-    # Create the custom labels for every hour (0-23)
-    # This maps '15' to '3 PM' etc.
     labels = [pd.to_datetime(h, format='%H').strftime('%-I %p') for h in range(25)]
-    
-    # If your bins cover multiple hours (e.g., size of 3), 
-    # you can pass these labels into customdata
-    fig.update_traces(customdata=labels)
+    fig_heat.update_traces(customdata=labels)
     st.plotly_chart(fig_heat, use_container_width=True)
 
     #Average cost by speed bin
