@@ -490,8 +490,8 @@ with tab4:
     fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", title= "Average Estimated Cost by Hour", text_auto=".2s")
     fig_avg_cost_hour.update_layout(yaxis_tickprefix='$')
     fig_avg_cost_hour.update_xaxes(
-        tickvals=[0, 5, 10, 15, 20],
-        ticktext=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
+        tickvals=[0, 3, 6, 9, 12, 15, 18, 21],
+        ticktext=["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
     )
     fig_avg_cost_hour.update_traces(marker_color='#5236ab')
     st.plotly_chart(fig_avg_cost_hour)
@@ -518,8 +518,8 @@ with tab4:
         color_discrete_map= severity_color_map
     )
     fig_bar.update_xaxes(
-        tickvals=[0, 5, 10, 15, 20],
-        ticktext=['12 AM', '5 AM', '10 AM', '3 PM', '8 PM']
+        tickvals=[0, 3, 6, 9, 12, 15, 18, 21],
+        ticktext=["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
