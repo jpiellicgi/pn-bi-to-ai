@@ -388,55 +388,69 @@ with tab2:
         
         st.plotly_chart(fig_bar, use_container_width=True)
 
-    with col_map:
-        severity_color_map = {
-            'Fatal': '#991f3d',
-            'Serious Injury': '#e31937',
-            'Minor Injury': '#ff6a00',
-            'Possible Injury': '#f1a425',
-            'No Injury': '#128354',
-            'Unknown': '#cccccc'
-            }
-        map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
-        lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
+with col_map:
+    severity_color_map = {
+        'Fatal': '#991f3d',
+        'Serious Injury': '#e31937',
+        'Minor Injury': '#ff6a00',
+        'Possible Injury': '#f1a425',
+        'No Injury': '#128354',
+        'Unknown': '#cccccc'
+    }
+    
+    map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
+    lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
 
-        if map_type == "Economic Heatmap":
-            fig_m = px.density_mapbox(
-                df,
-                lat="latitude",
-                lon="longitude",
-                z="Estimated Total Comprehensive Cost",
-                radius=12,
-                center=dict(lat=lat_c, lon=lon_c),
-                zoom=10,
-                mapbox_style="open-street-map",
-                color_continuous_scale="Purples",           
+    if map_type == "Economic Heatmap":
+        fig_m = px.density_mapbox(
+            df,
+            lat="latitude",
+            lon="longitude",
+            z="Estimated Total Comprehensive Cost",
+            radius=12,
+            center=dict(lat=lat_c, lon=lon_c),
+            zoom=10,
+            mapbox_style="open-street-map",
+            color_continuous_scale="Purples",           
+        )
+        # Update the colorbar to show currency
+        fig_m.update_layout(
+            coloraxis_colorbar=dict(
+                title="Total Comprehensive Cost",
+                tickprefix="$",
+                tickformat=",d" # Adds commas for thousands
             )
-            # Update the colorbar to show currency
-            fig_m.update_layout(
-                coloraxis_colorbar=dict(
-                    title="Total Comprehensive Cost",
-                    tickprefix="$",
-                    tickformat=",d" # Adds commas for thousands
-                )
+        )
+    else:
+        # We set the order from least serious to most serious. 
+        # Plotly draws these in order, so 'Fatal' (the last one) will be layered on top.
+        layer_order = ["Unknown", "No Injury", "Possible Injury", "Minor Injury", "Serious Injury", "Fatal"]
+        
+        fig_m = px.scatter_mapbox(
+            df,
+            lat="latitude",
+            lon="longitude",
+            color="Severity_Label",
+            color_discrete_map=severity_color_map,
+            category_orders={"Severity_Label": layer_order},
+            labels={"Severity_Label": "Severity Label"},
+            size="marker_size",
+            center=dict(lat=lat_c, lon=lon_c),
+            zoom=10,
+            mapbox_style="open-street-map",
+        )
+        
+        # This ensures the legend still shows 'Fatal' at the top, even though it's drawn last
+        fig_m.update_layout(
+            legend=dict(
+                traceorder="reversed",
+                title_font_family="Arial",
+                font=dict(size=12)
             )
-        else:
-            fig_m = px.scatter_mapbox(
-                df,
-                lat="latitude",
-                lon="longitude",
-                color="Severity_Label",
-                color_discrete_map= severity_color_map,
-                category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
-                labels={"Severity_Label": "Severity Label"},
-                size="marker_size",
-                center=dict(lat=lat_c, lon=lon_c),
-                zoom=10,
-                mapbox_style="open-street-map",
-            )
+        )
 
-        fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
-        st.plotly_chart(fig_m, use_container_width=True)    
+    fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
+    st.plotly_chart(fig_m, use_container_width=True)
 
 with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
