@@ -403,8 +403,16 @@ with tab2:
                 center=dict(lat=lat_c, lon=lon_c),
                 zoom=10,
                 mapbox_style="open-street-map",
-                color_continuous_scale="Purples",
+                color_continuous_scale="Purples",           
             )
+            # Update the colorbar to show currency
+        fig_m.update_layout(
+            coloraxis_colorbar=dict(
+                title="Total Comprehensive Cost",
+                tickprefix="$",
+                tickformat=",d" # Adds commas for thousands
+            )
+        )
         else:
             fig_m = px.scatter_mapbox(
                 df,
