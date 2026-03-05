@@ -370,7 +370,7 @@ with tab2:
         
         fig_bar.update_layout(
             xaxis_title="Cost",
-            yaxis_title=None,
+            yaxis_title="Street",
             xaxis=dict(
                 tickprefix="$", 
                 tickformat=",d"  # Adds commas for thousands (e.g., $1,000)
