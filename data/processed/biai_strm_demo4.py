@@ -103,12 +103,19 @@ def load_partner_data(url: str) -> pd.DataFrame:
         else:
             df[col] = 0
 
+    # Transportation Mode Mapping (Updated with more modes from data source)
     mapping = {
-        "Passenger Car": ["passenger_car_involved", "car_fl", "is_car"],
+        "Passenger Car": ["passenger car_involved", "passenger_car_involved", "car_fl", "is_car"],
         "Bicycle": ["bicycle_involved", "bicycle_fl", "is_bike"],
         "Pedestrian": ["pedestrian_involved", "pedestrian_fl", "is_ped"],
         "Motorcycle": ["motorcycle_involved", "motorcycle_fl", "is_mc"],
         "Commercial Veh": ["comml_mtr_veh_fl", "cmv_involved", "is_truck"],
+        "Micromobility": ["micromobility device_involved", "micromobility_fl"],
+        "E-Scooter": ["e-scooter_involved", "scooter_fl"],
+        "Large Passenger Veh": ["large passenger vehicle_involved", "large_veh_fl"],
+        "Train": ["train_involved", "train_fl"],
+        "Motor Vehicle": ["motor vehicle_involved", "motor_veh_fl"],
+        "Other": ["other_involved", "other_fl"],
     }
 
     for clean_label, variations in mapping.items():
