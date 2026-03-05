@@ -9,13 +9,13 @@ import streamlit as st
 from streamlit.components.v1 import html
 import plotly.express as px
 import plotly.graph_objects as go
-# import pydeck as pdk
+import pydeck as pdk
 import altair as alt
 import requests
 
-# --- 1. PAGE CONFIGURATION (KEEP PARTNER DEFAULT) ---
+# --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="TxDOT | Austin Safety Intelligence Elite",
+    page_title="CGI | Austin Safety Intelligence Elite",
     layout="wide",
     page_icon="🛣️"
 )
@@ -33,24 +33,29 @@ CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
 CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 
-# MAPBOX_TOKEN = "pk.eyJ1IjoianBpZWxsaWNnaSIsImEiOiJjbWw2c21tdGgwaThvM2RvY25iaTc5aWR1In0.1zrdRIL8deHfHNMikwdKMw"
-
-
-# --- 3. SMART ASSET LOADER (NOTE: glob works for local files, not URLs) ---
-def get_txdot_logo():
-    # If you later add a local logo in the repo (e.g., ./data/processed/txdot.png),
-    # you can switch DATA_DIR to a local path or directly use a URL with st.image(URL).
-    extensions = ["*.png", "*.jpg", "*.jpeg", "*.svg", "*.webp"]
-    for ext in extensions:
-        pattern = os.path.join(DATA_DIR, "txdot" + ext)
-        files = glob.glob(pattern)
-        if files:
-            return files[0]
+# --- 3. SMART ASSET LOADER ---
+def get_cgi_logo():
+    """
+    Locates the CGI corporate logo by checking local files and remote URL.
+    """
+    logo_filename = "CGI_logo_color_rgb.jpg"
+    github_logo_url = f"{DATA_DIR}/{logo_filename}"
+    
+    # Check local path first
+    if os.path.exists(logo_filename):
+        return logo_filename
+    
+    # Check GitHub URL
+    try:
+        response = requests.head(github_logo_url, timeout=5)
+        if response.status_code == 200:
+            return github_logo_url
+    except:
+        pass
+        
     return None
 
-
-LOGO_PATH = get_txdot_logo()
-
+LOGO_PATH = get_cgi_logo()
 
 # ----------------------------
 # Shared: Safe remote CSV loader
@@ -72,38 +77,32 @@ def read_csv_url(url: str) -> pd.DataFrame:
     # Let pandas parse from bytes
     return pd.read_csv(pd.io.common.BytesIO(r.content), low_memory=False)
 
-
 # ----------------------------
-# Partner Dashboard Data Pipeline (unchanged logic, just uses safe loader)
+# Data Pipeline
 # ----------------------------
 @st.cache_data(show_spinner=False)
 def load_partner_data(url: str) -> pd.DataFrame:
     try:
         df = read_csv_url(url)
-    except Exception as e:
-        # local load for dev testing
-        local_path = os.path.join(LOCAL_DATA_DIR,os.path.split(url)[-1])
+    except Exception:
+        local_path = os.path.join(LOCAL_DATA_DIR, os.path.split(url)[-1])
         df = pd.read_csv(local_path)
 
-    # Preprocessing
     df["Crash timestamp"] = pd.to_datetime(df["Crash timestamp (US/Central)"], errors="coerce")
     df["Year"] = df["Crash timestamp"].dt.year
     df["HOUR"] = df["Crash timestamp"].dt.hour
     df["DAY_NAME"] = df["Crash timestamp"].dt.day_name()
 
-    # Severity Mapping
     sev_map = {1: "Fatal", 2: "Serious Injury", 3: "Minor Injury", 4: "Possible Injury", 0: "No Injury", 5: "Unknown"}
     df["Severity_Label"] = df["crash_sev_id"].map(sev_map)
 
-    # Robust Numeric Handling
-    cols_to_fix = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost"] #"death_cnt"
+    cols_to_fix = ["tot_injry_cnt", "crash_speed_limit", "Estimated Total Comprehensive Cost"]
     for col in cols_to_fix:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
         else:
             df[col] = 0
 
-    # STANDARDIZE MODE COLUMNS
     mapping = {
         "Passenger Car": ["passenger_car_involved", "car_fl", "is_car"],
         "Bicycle": ["bicycle_involved", "bicycle_fl", "is_bike"],
@@ -119,444 +118,130 @@ def load_partner_data(url: str) -> pd.DataFrame:
         else:
             df[clean_label] = 0
 
-    # Marker size logic
     df["marker_size"] = (df["crash_speed_limit"] / 5).clip(lower=2)
-
-    # Speed Binning
     bins = [0, 20, 30, 40, 50, 60, 70, 80, 110]
     labels = ["<20", "20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80+"]
     df["Speed_Bin"] = pd.cut(df["crash_speed_limit"], bins=bins, labels=labels)
 
     return df.dropna(subset=["latitude", "longitude"])
 
-
 # ----------------------------
-# Your Prescriptive Tab Helpers
+# Prescriptive Tab Helpers
 # ----------------------------
-REQUIRED_COLS = [
-    "latitude",
-    "longitude",
-    "Address",
-    "pred_est_ttl_comp_cost",
-    "best_action",
-    "expected_cost_after_action",
-    "expected_reduction_amount",
-    "pct_reduction",
-    "ai_rationale",
-]
+REQUIRED_COLS = ["latitude", "longitude", "Address", "pred_est_ttl_comp_cost", "best_action", "expected_cost_after_action", "expected_reduction_amount", "pct_reduction", "ai_rationale"]
 
-
-def _coerce_numeric(df: pd.DataFrame, cols) -> pd.DataFrame:
+def _coerce_numeric(df, cols):
     out = df.copy()
     for c in cols:
         if c in out.columns:
             out[c] = pd.to_numeric(out[c], errors="coerce")
     return out
 
-
-def normalize_pct_reduction(series: pd.Series) -> pd.Series:
-    """
-    Normalize pct_reduction into a 0..1 range.
-    Handles cases where values are already 0..1 OR 0..100.
-    """
+def normalize_pct_reduction(series):
     s = pd.to_numeric(series, errors="coerce")
-    if s.dropna().empty:
-        return s
-
+    if s.dropna().empty: return s
     p95 = s.dropna().quantile(0.95)
-    if p95 > 1.5:
-        return s / 100.0
-    return s
+    return s / 100.0 if p95 > 1.5 else s
 
+def make_location_id(df):
+    return df["latitude"].round(5).astype(str) + ", " + df["longitude"].round(5).astype(str)
 
-def make_location_id(df: pd.DataFrame) -> pd.Series:
-    lat = df["latitude"].round(5).astype(str)
-    lon = df["longitude"].round(5).astype(str)
-    # return "loc_" + lat + "_" + lon + "_i" + df.index.astype(str)
-    return lat + ", " + lon
-
-
-def action_color_map(actions) -> Dict[str, Tuple[int, int, int]]:
-    palette = [
-        (31, 119, 180),   # blue
-        (255, 127, 14),   # orange
-        (44, 160, 44),    # green
-        (214, 39, 40),    # red
-        (148, 103, 189),  # purple
-        (140, 86, 75),    # brown
-        (227, 119, 194),  # pink
-        (127, 127, 127),  # gray
-        (188, 189, 34),   # olive
-        (23, 190, 207),   # teal
-    ]
-    actions = list(actions)
-    return {a: palette[i % len(palette)] for i, a in enumerate(actions)}
-
-
-def scale_sizes(values: pd.Series, min_size=40, max_size=400) -> pd.Series:
-    v = pd.to_numeric(values, errors="coerce").fillna(0.0)
-
-    if v.nunique() <= 1:
-        return pd.Series(np.full(len(v), (min_size + max_size) / 2), index=v.index)
-
-    lo, hi = v.quantile(0.05), v.quantile(0.95)
-    if hi <= lo:
-        lo, hi = v.min(), v.max()
-
-    v_clip = v.clip(lo, hi)
-    t = (v_clip - lo) / (hi - lo + 1e-9)
-    t = np.sqrt(t)
-    return min_size + t * (max_size - min_size)
-
-
-def compact_text(s: str, n=140) -> str:
-    if s is None or (isinstance(s, float) and math.isnan(s)):
-        return ""
+def compact_text(s, n=140):
+    if s is None or (isinstance(s, float) and math.isnan(s)): return ""
     s = str(s).strip()
-    if len(s) <= n:
-        return s
-    return s[: n - 1] + "…"
+    return s[:n-1] + "…" if len(s) > n else s
 
-
-def fmt_dollars(x) -> str:
+def fmt_dollars(x):
     try:
-        if pd.isna(x):
-            return "—"
-        return f"${float(x):,.0f}"
-    except Exception:
-        return "—"
-
+        return f"${float(x):,.0f}" if pd.notnull(x) else "—"
+    except: return "—"
 
 @st.cache_data(show_spinner=False)
-def prepare_prescriptive_df(df_prescriptive: pd.DataFrame) -> pd.DataFrame:
+def prepare_prescriptive_df(df_prescriptive):
     df = df_prescriptive.copy()
-
-    missing = [c for c in REQUIRED_COLS if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing required columns: {missing}")
-
-    df = _coerce_numeric(
-        df,
-        ["latitude", "longitude", "pred_est_ttl_comp_cost", "expected_cost_after_action",
-         "expected_reduction_amount", "pct_reduction"]
-    )
-
+    df = _coerce_numeric(df, ["latitude", "longitude", "pred_est_ttl_comp_cost", "expected_cost_after_action", "expected_reduction_amount", "pct_reduction"])
     df = df.dropna(subset=["latitude", "longitude"]).copy()
+    df = df[df["best_action"] != "no_change"].copy()
     df["pct_reduction_norm"] = normalize_pct_reduction(df["pct_reduction"])
     df["location_id"] = make_location_id(df)
-
-    df["address"] = df["Address"].astype(str).fillna("").str.strip()
-    df["address_short"] = df["address"].map(lambda x: compact_text(x, 80))
+    df["address_short"] = df["Address"].astype(str).map(lambda x: compact_text(x, 80))
     df["ai_rationale_short"] = df["ai_rationale"].astype(str).map(lambda x: compact_text(x, 160))
-
-    df["point_size"] = scale_sizes(df["expected_reduction_amount"], min_size=40, max_size=360)
     return df
 
+def build_map(df, top_n=50, all_actions=None):
+    # Sort and take top N
+    df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
 
-def kpi_row(df: pd.DataFrame):
-    total_reduction = df["expected_reduction_amount"].sum(skipna=True)
-    avg_pct = df["pct_reduction_norm"].mean(skipna=True)
-    top_action = df["best_action"].mode().iloc[0] if not df["best_action"].dropna().empty else "—"
+    # Legend/category order
+    if all_actions is None:
+        all_actions = list(df_map["best_action"].dropna().unique())
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total expected reduction", fmt_dollars(total_reduction))
-    c2.metric("Avg % reduction", f"{(avg_pct * 100):.1f}%")
-    c3.metric("Most recommended action", top_action)
-
-
-# def build_map(df: pd.DataFrame, top_n: int, all_actions: list):
-#     df = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-
-    
-#     ACTION_COLORS_RGB = {
-#             "reduce_speed_limit":   (227, 25, 55),
-#             "increase_enforcement":      (82, 54, 171),
-#             "improve_crosswalks":  (110, 63, 237),
-#             "micromobility_zone_controls":    (255, 115, 98),
-#             "work_zone_controls":   (203, 195, 230),
-#             "add_speed_bumps":    (168, 36, 101)
-#         }
-
-#     cmap = action_color_map(all_actions)
-#     df["color"] = df["best_action"].map(lambda a: list(ACTION_COLORS_RGB.get(a, (120, 120, 120))))
-
-#     df["pct_reduction_display"] = (df["pct_reduction_norm"] * 100).round(1).astype(str) + "%"
-#     df["pred_est_ttl_comp_cost_display"] = df["pred_est_ttl_comp_cost"].map(fmt_dollars)
-#     df["expected_reduction_amount_display"] = df["expected_reduction_amount"].map(fmt_dollars)
-#     df["expected_cost_after_action_display"] = df["expected_cost_after_action"].map(fmt_dollars)
-
-#     center_lat = float(df["latitude"].mean()) if len(df) else 30.2672
-#     center_lon = float(df["longitude"].mean()) if len(df) else -97.7431
-
-#     view_state = pdk.ViewState(latitude=center_lat, longitude=center_lon, zoom=10 if len(df) else 4, pitch=0)
-
-#     layer = pdk.Layer(
-#         "ScatterplotLayer",
-#         data=df,
-#         get_position="[longitude, latitude]",
-#         get_fill_color="color",
-#         get_radius="point_size",
-#         radius_scale=1,
-#         radius_min_pixels=2,
-#         radius_max_pixels=80,
-#         pickable=True,
-#         opacity=0.75,
-#         stroked=True,
-#         get_line_color=[20, 20, 20],
-#         line_width_min_pixels=1,
-#     )
-
-#     tooltip = {
-#         "html": """
-#         <div style="max-width: 360px;">
-#           <div><b>Address</b>: {address_short}</div>
-#           <div><b>Location</b>: {location_id}</div>
-#           <div><b>Action</b>: {best_action}</div>
-#           <div><b>Risk score</b>: {pred_est_ttl_comp_cost_display}</div>
-#           <div><b>Expected reduction</b>: {expected_reduction_amount_display}</div>
-#           <div><b>% reduction</b>: {pct_reduction_display}</div>
-#           <div><b>Cost after action</b>: {expected_cost_after_action_display}</div>
-#           <hr style="margin:6px 0;" />
-#           <div><b>Rationale</b>: {ai_rationale_short}</div>
-#         </div>
-#         """,
-#         "style": {"backgroundColor": "rgba(25, 25, 25, 0.92)", "color": "white"},
-#     }
-
-#     deck = pdk.Deck(
-#         layers=[layer],
-#         initial_view_state=view_state,
-#         tooltip=tooltip,
-#         map_style="mapbox://styles/mapbox/streets-v12",
-#         api_keys={"mapbox": MAPBOX_TOKEN},
-#         map_provider="mapbox",
-#     )
-
-#     st.pydeck_chart(deck, use_container_width=True)
-
-def build_map(df_in: pd.DataFrame, top_n: int, all_actions: list):
-    # Defensive: ensure we actually got a DataFrame
-    if not isinstance(df_in, pd.DataFrame):
-        raise TypeError(f"build_map(df_in=...) expected a pandas DataFrame, got {type(df_in)}")
-
-    # Work on a copy with top-N
-    df = (
-        df_in.sort_values("expected_reduction_amount", ascending=False)
-             .head(top_n)
-             .copy()
-    )
-
-    # ---- Your action -> RGB mapping (as provided) ----
-    ACTION_COLORS_RGB = {
-        "reduce_speed_limit":          (227, 25, 55),
-        "increase_enforcement":        (82, 54, 171),
-        "improve_crosswalks":          (110, 63, 237),
-        "micromobility_zone_controls": (255, 115, 98),
-        "work_zone_controls":          (203, 195, 230),
-        "add_speed_bumps":             (168, 36, 101),
-    }
-
-    # Convert RGB tuples to HEX strings for Plotly
-    def rgb_to_hex(rgb_tuple):
+    # Color mapping (fallback to gray if missing)
+    ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}    
+    def _rgb_to_plotly(rgb_tuple):
         r, g, b = rgb_tuple
-        return f"#{r:02X}{g:02X}{b:02X}"
+        return f"rgb({r},{g},{b})"
+    ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
+    DEFAULT_COLOR = "rgb(120,120,120)"
+    color_map = {a: ACTION_COLORS.get(a, DEFAULT_COLOR) for a in all_actions}
 
-    action_to_hex_full = {k: rgb_to_hex(v) for k, v in ACTION_COLORS_RGB.items()}
-    DEFAULT_HEX = "#787878"
+    # Center map on data
+    center_lat = df_map["latitude"].mean()
+    center_lon = df_map["longitude"].mean()
 
-    # Plotly expects a dict of category->hex. Build it only for categories present to avoid warnings.
-    present_actions = sorted(df["best_action"].dropna().unique().tolist())
-    color_map_present = {a: action_to_hex_full.get(a, DEFAULT_HEX) for a in present_actions}
-
-    # Display columns (reuse your formatting helpers)
-    df["pct_reduction_display"] = (df["pct_reduction_norm"] * 100).round(1).astype(str) + "%"
-    df["pred_est_ttl_comp_cost_display"] = df["pred_est_ttl_comp_cost"].map(fmt_dollars)
-    df["expected_reduction_amount_display"] = df["expected_reduction_amount"].map(fmt_dollars)
-    df["expected_cost_after_action_display"] = df["expected_cost_after_action"].map(fmt_dollars)
-
-    # Center and zoom
-    center_lat = float(df["latitude"].mean()) if len(df) else 30.2672
-    center_lon = float(df["longitude"].mean()) if len(df) else -97.7431
-    zoom = 10 if len(df) else 4
-
-    # If you have a 'point_size' column, use it; otherwise keep uniform markers
-    size_col = "point_size" if "point_size" in df.columns else None
-
-    # Build the figure
     fig = px.scatter_mapbox(
-        df,
+        df_map,
         lat="latitude",
         lon="longitude",
         color="best_action",
-        size=size_col,
-        size_max=20,                               # tune as desired
-        color_discrete_map=color_map_present,      # dict, not lambda
-        hover_name=None,
-        hover_data=None,
-        zoom=zoom,
-        height=520,
+        color_discrete_map=color_map,
+        category_orders={"best_action": all_actions},
+        hover_name="best_action",
+        hover_data={
+            "expected_reduction_amount": ":,.0f",
+            "latitude": False,
+            "longitude": False,
+        },
+        zoom=10,
+        center=dict(lat=center_lat, lon=center_lon),
+        height=550,
     )
 
-    # OpenStreetMap tiles (free, no token)
+    # Marker and layout tweaks
+    fig.update_traces(marker=dict(size=10, opacity=0.9))
     fig.update_layout(
-        mapbox_style="open-street-map",
-        mapbox_center={"lat": center_lat, "lon": center_lon},
-        margin=dict(l=0, r=0, t=40, b=0),
-        title={"text": "Locations by Action", "x": 0.02, "xanchor": "left"},
-        legend_title_text="Best action",
+        mapbox_style="open-street-map",  # <- no Mapbox token required
+        margin=dict(l=0, r=0, t=0, b=0),
+        legend_title_text="Recommended action",
     )
 
-    # If you didn’t use a size column, set a default marker size
-    if size_col is None:
-        fig.update_traces(marker={"size": 10})
-
-    fig.update_traces(
-            opacity=0.85,               # ✅ trace-level opacity
-            marker=dict(line=dict(width=1, color="rgba(20,20,20,0.9)"))
-        )
-
-    # Hovertemplate (matches your pydeck tooltip content/order)
-    hovertemplate = (
-        "<b>Address</b>: %{customdata[0]}<br>"
-        "<b>Location</b>: %{customdata[1]}<br>"
-        "<b>Action</b>: %{customdata[2]}<br>"
-        "<b>Risk score</b>: %{customdata[3]}<br>"
-        "<b>Expected reduction</b>: %{customdata[4]}<br>"
-        "<b>% reduction</b>: %{customdata[5]}<br>"
-        "<b>Cost after action</b>: %{customdata[6]}<br>"
-        "<hr style='margin:6px 0;'/>"
-        "<b>Rationale</b>: %{customdata[7]}<extra></extra>"
-    )
-
-    # Ensure columns exist; if not, create empty strings to avoid KeyErrors
-    customdata_cols = [
-        "address_short",
-        "location_id",
-        "best_action",
-        "pred_est_ttl_comp_cost_display",
-        "expected_reduction_amount_display",
-        "pct_reduction_display",
-        "expected_cost_after_action_display",
-        "ai_rationale_short",
-    ]
-    for c in customdata_cols:
-        if c not in df.columns:
-            df[c] = ""
-
-    fig.update_traces(
-        customdata=df[customdata_cols].values,
-        hovertemplate=hovertemplate,
-        hoverinfo="skip",  # rely entirely on hovertemplate
-    )
-
-    # Render in Streamlit
     st.plotly_chart(fig, use_container_width=True)
-    
-def action_bars(df: pd.DataFrame):
-    df_plot = df[df["best_action"].ne("no_change")].copy()
 
-    agg = df_plot.groupby("best_action", dropna=False).agg(
-        total_reduction=("expected_reduction_amount", "sum"),
-        locations=("location_id", "count"),
-        avg_pct=("pct_reduction_norm", "mean"),
-    ).reset_index()
-
-    # --- Chart 1: Total reduction ---
-    bar1 = (
-        alt.Chart(agg)
-        .mark_bar(color="#5236ab")
-        .encode(
-            x=alt.X(
-                "best_action:N",
-                title="Best action",
-                sort="-y",
-                axis=alt.Axis(labelAngle=-35, labelLimit=180),
-            ),
-            y=alt.Y(
-                "total_reduction:Q",
-                title="Total expected reduction ($)",
-                axis=alt.Axis(format="~s"),  # ✅ 1.2M instead of 1200000
-            ),
-            tooltip=[
-                "best_action",
-                alt.Tooltip("total_reduction:Q", format=",.0f"),
-                "locations",
-                alt.Tooltip("avg_pct:Q", format=".1%"),
-            ],
-        )
-        .properties(height=340, title="Total expected reduction by action", padding={"top":30})
-        .configure_title(fontSize=14, offset=24)  # ✅ prevents title clipping
-        .configure_view(strokeWidth=0)
-    )
-
-    # --- Chart 2: Locations ---
-    bar2 = (
-        alt.Chart(agg)
-        .mark_bar(color="#5236ab")
-        .encode(
-            x=alt.X(
-                "best_action:N",
-                title="Best action",
-                sort="-y",
-                axis=alt.Axis(labelAngle=-35, labelLimit=180),
-            ),
-            y=alt.Y("locations:Q", title="# Locations"),
-            tooltip=["best_action", "locations"],
-        )
-        .properties(height=340, title="Locations by action")
-        .configure_title(fontSize=14, offset=16)
-        .configure_view(strokeWidth=0)
-    )
-
+def action_bars(df,top_n=50):
+    # Sort and take top N
+    df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+    agg = df_bar.groupby("best_action").agg(total_reduction=("expected_reduction_amount", "sum"), locations=("location_id", "count")).reset_index()
     c1, c2 = st.columns(2)
-    c1.altair_chart(bar1, use_container_width=True)
-    c2.altair_chart(bar2, use_container_width=True)
+    c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="total_reduction:Q"), use_container_width=True)
+    c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="locations:Q"), use_container_width=True)
 
-def ranked_table_and_details(df: pd.DataFrame, top_n: int):
-    ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-
-    show_cols = [
-        "address",
-        "location_id",
-        "best_action",
-        "pred_est_ttl_comp_cost",
-        "expected_reduction_amount",
-        "pct_reduction_norm",
-        "expected_cost_after_action",
-        "ai_rationale_short",
-    ]
-    ranked_display = ranked[show_cols].rename(columns={
-        "address": "Address",
-        "pct_reduction_norm": "pct_reduction",
-        "ai_rationale_short": "ai_rationale (short)",
-    })
-
-    ranked_display["expected_reduction_amount"] = ranked_display["expected_reduction_amount"].map(fmt_dollars)
-    ranked_display["expected_cost_after_action"] = ranked_display["expected_cost_after_action"].map(fmt_dollars)
-    ranked_display["pred_est_ttl_comp_cost"] = ranked_display["pred_est_ttl_comp_cost"].map(fmt_dollars)
-
-    ranked_display["pct_reduction"] = ranked["pct_reduction_norm"].map(
-        lambda x: f"{x * 100:.1f}%" if pd.notnull(x) else "—"
-    )
-
+def ranked_table_and_details(df, top_n):
     left, right = st.columns([1.35, 1])
-
+    ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
     with left:
         st.subheader(f"Top {top_n} locations by expected reduction")
+        show_columns = ["Address", "location_id", "best_action", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]
+        ranked_display = ranked[show_columns].rename(columns={"address": "Address","pct_reduction_norm": "pct_reduction","ai_rationale_short": "ai_rationale (short)",})
+        ranked_display["expected_reduction_amount"] = ranked_display["expected_reduction_amount"].map(fmt_dollars)
+        ranked_display["expected_cost_after_action"] = ranked_display["expected_cost_after_action"].map(fmt_dollars)
+        ranked_display["pred_est_ttl_comp_cost"] = ranked_display["pred_est_ttl_comp_cost"].map(fmt_dollars)
         st.dataframe(ranked_display, use_container_width=True, hide_index=True)
-
+        
     with right:
-        st.subheader("Location details")
-
-        options = ranked[["address", "location_id"]].fillna("").copy()
-        options["label"] = options["address"] + "  (" + options["location_id"] + ")"
-
-        selected_label = st.selectbox(
-            "Select an address to see full rationale",
-            options=options["label"].tolist(),
-            index=0 if len(options) else None,
-        )
-
+        st.subheader("")
+        options = ranked[["address_short", "location_id"]].fillna("").copy()
+        options["label"] = options["address_short"] + "  (" + options["location_id"] + ")"
+        selected_label = st.selectbox("Select an address to see full rationale", options=options["label"].tolist(),index=0 if len(options) else None)
         if selected_label:
             selected_loc = options.loc[options["label"] == selected_label, "location_id"].iloc[0]
             row = df.loc[df["location_id"] == selected_loc].iloc[0]
@@ -571,103 +256,98 @@ def ranked_table_and_details(df: pd.DataFrame, top_n: int):
             )
             st.markdown("**Rationale:**")
             st.write(str(row.get("ai_rationale", "")))
-
-
 # ----------------------------
-# Load datasets
+# Execution & UI
 # ----------------------------
 try:
     df_raw1 = load_partner_data(CSV_PATH1)
 except Exception as e:
-    st.error(f"🛑 Crash dataset load failed: {e}")
+    st.error(f"Crash dataset load failed: {e}")
     st.stop()
 
 try:
     df_prescriptive_raw = read_csv_url(CSV_PATH2)
 except Exception as e:
     df_prescriptive_raw = None
-    prescriptive_load_error = str(e)
 
-
-# --- 5. SIDEBAR FILTERS (PARTNER DEFAULT) ---
+# --- SIDEBAR (Logo Removed from here) ---
 with st.sidebar:
-    if LOGO_PATH:
-        st.image(LOGO_PATH, use_container_width=True)
     st.title("Global Filters")
-
     all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
     selected_years = st.multiselect("📅 Fiscal Years:", all_years, default=all_years[-4:])
-
     top_10_names = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
-
+    selected_street = st.selectbox("📍 Corridor:", ["All Corridors"] + top_10_names)
     corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
-    selected_street = st.selectbox("📍 Corridor:", corridor_options)
 
-
-# --- 6. APPLY FILTERS ---
+# Filter Logic
 df = df_raw1[df_raw1["Year"].isin(selected_years)]
-
-if selected_street not in ["All Corridors", "--- Full Street List ---"]:
+if selected_street != "All Corridors":
     df = df[df["rpt_street_name"] == selected_street]
     current_focus = selected_street
 else:
     current_focus = "Austin District (Full View)"
 
+# --- MAIN DASHBOARD AREA ---
+if LOGO_PATH:
+    st.image(LOGO_PATH, width=180)
 
-# --- 7. HEADER & KPIs ---
 st.title("Safety Intelligence Dashboard")
-st.caption(f"Currently Analyzing: **{current_focus}**")
+st.caption(f"Analyzing: **{current_focus}**")
 
 k1, k2, k3 = st.columns(3)
 k1.metric("Crash Volume", f"{len(df):,}")
 k2.metric("Lives Lost", int(df["death_cnt"].sum()))
 k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 
-st.markdown("---")
+# --- TABS ---
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🚶Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
 
-
-# --- 8. TABS (ADD YOUR 5TH TAB) ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-    ["Top Predictors and Historical Overview", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"]
-)
-
-# --- TAB 1 ---
 with tab1:
     st.write("##### The top predictors and prescriptive actions were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.")
     shap_output, historicaloverview = st.columns([1, 2], gap="large")
     with shap_output:
         st.subheader("Top Predictors of Estimated Cost")
-        st.image("data/processed/BI to AI SHAP vf.png", width=800)
-        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. The most important features for predicting estimated cost were pedestrian involved, motorcycle involved, and crash speed limit.")
+        st.image("data/processed/outputs/BI to AI SHAP vf.png", width=800)
+        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. This SHAP summary plot shows how each feature influences the model's predicted crash cost relative to the average. Features are ranked by importance (top = most impactful). Each dot represents an individual crash — red dots indicate a high feature value, blue dots indicate a low feature value. Dots to the right of center (positive SHAP) mean that feature increased the predicted cost; dots to the left (negative SHAP) mean it decreased the predicted cost. The three most influential predictors of estimated crash cost are pedestrian involved, motorcycle involved, and crash speed limit.")
     
     with historicaloverview:
         st.subheader("Historical Trends")
 
         st.write("**Estimated Total Comprehensive Cost per Year**")
         df_total_cost= df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
-        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost", 
-                             color_continuous_scale="Purples", text_auto=".2s")
+        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", text_auto=".2s")
         fig_cost_bar.update_layout(
-            height=300, 
-            width=400,
-            margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+            height=400, 
+            width=800,
+            margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
+            yaxis_tickprefix='$'
             )
+        avg_annual_cost_ref= df_total_cost["Estimated Total Comprehensive Cost"].mean()
+        fig_cost_bar.add_hline(
+            y=avg_annual_cost_ref,
+            line_width=3,
+            line_dash="dash",
+            line_color="red",
+            annotation_text=f"Average Annual Cost: ${avg_annual_cost_ref:,.0f}",
+            annotation_position="bottom right"
+        )
+        fig_cost_bar.update_xaxes(type='category')
+        fig_cost_bar.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_cost_bar)
 
         st.write("**Total Number of Crashes per Year**")
         df_crash_count= df.groupby("Year")["ID"].count().reset_index()
         df_crash_count.columns = ["Year", "Number of Crashes"]
-        fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes", color="Number of Crashes", 
-        color_continuous_scale="Purples", text_auto=".2s")
+        fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes", text_auto=".2s")
         fig_crash_count.update_layout(
-            height=300, 
-            width=400,
+            height=400, 
+            width=800,
             margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
             )
+        fig_crash_count.update_xaxes(type='category')
+        fig_crash_count.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_crash_count)
-  
 
-# --- TAB 2 ---
 with tab2:
     col_list, col_map = st.columns([1, 2])
     with col_list:
@@ -680,6 +360,14 @@ with tab2:
         st.plotly_chart(fig_bar, use_container_width=True)
 
     with col_map:
+        severity_color_map = {
+            'Fatal': '#991f3d',
+            'Serious Injury': '#e31937',
+            'Minor Injury': '#ff6a00',
+            'Possible Injury': '#f1a425',
+            'No Injury': '#128354',
+            'Unknown': '#cccccc'
+            }
         map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
         lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
 
@@ -701,6 +389,9 @@ with tab2:
                 lat="latitude",
                 lon="longitude",
                 color="Severity_Label",
+                color_discrete_map= severity_color_map,
+                category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+                labels={"Severity_Label": "Severity Label"},
                 size="marker_size",
                 center=dict(lat=lat_c, lon=lon_c),
                 zoom=10,
@@ -708,113 +399,157 @@ with tab2:
             )
 
         fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
-        st.plotly_chart(fig_m, use_container_width=True)
+        st.plotly_chart(fig_m, use_container_width=True)    
 
-# --- TAB 3 ---
 with tab3:
     st.subheader(f"Crash Risk Profile: {current_focus}")
-    r1c1, r1c2, r1c3 = st.columns(3) #removed r1c1 for testing
-    # with r1c1:
-    #     hr_vol = df.groupby("HOUR").size().reset_index(name="Volume")
-    #     st.plotly_chart(
-    #         px.line(hr_vol, x="HOUR", y="Volume", markers=True, color_discrete_sequence=["#6A0DAD"]),
-    #         use_container_width=True,
-    #     )
+    r1c1, r1c2, r1c3 = st.columns(3) 
     with r1c1:
-        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color_discrete_sequence=px.colors.sequential.Purples_r, title='Accident Severity Breakdown')
+        severity_color_map = {
+            'Fatal': '#991f3d',
+            'Serious Injury': '#e31937',
+            'Minor Injury': '#ff6a00',
+            'Possible Injury': '#f1a425',
+            'No Injury': '#128354',
+            'Unknown': '#cccccc'
+            }
+        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color= "Severity_Label", color_discrete_map=severity_color_map, category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+                         labels={"Severity_Label": "Severity Label"}, title='Crash Severity Breakdown')
         fig_pie.update_layout(
             height=450, 
             width=500,
+            legend_title_text='Severity Label',
             legend=dict(
-                x=0.85,          # Pulls legend closer to the center
-                #xanchor="left",
-                #yanchor="middle",
+                x=0.85,        
                 y=0.5
                 )   
             )
         st.plotly_chart(fig_pie, use_container_width=True)
     
     with r1c2:
-        #Accidents by Speed Limit and Severity
+        #Crashes by Speed Limit and Severity
+        severity_color_map = {
+            'Fatal': '#991f3d',
+            'Serious Injury': '#e31937',
+            'Minor Injury': '#ff6a00',
+            'Possible Injury': '#f1a425',
+            'No Injury': '#128354',
+            'Unknown': '#cccccc'
+            }
         df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"]).size().reset_index(name="Accident_Count")
-        #df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"])["ID"].count().reset_index(name="Accident_Count")
         fig_bar = px.bar(
             df_speed_severity,
             x="Speed_Bin",
             y="Accident_Count",
             color="Severity_Label",
-            title="Accidents by Speed Limit and Severity",
-            labels={"Accident_Count": "Number of Accidents", "Speed_Bin": "Speed Limit (mph)", "Severity_Label": "Severity Label"},
+            title="Crashes by Speed Limit and Severity",
+            labels={"Accident_Count": "Number of Crashes", "Speed_Bin": "Speed Limit (mph)", "Severity_Label": "Severity Label"},
             # This ensures the bars are stacked rather than grouped
             barmode="stack",
             # Optional: Define a specific order for the severity levels in the legend
             category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
-            color_discrete_sequence=px.colors.sequential.Purples_r
+            color_discrete_map=severity_color_map
+            #color_discrete_sequence=px.colors.sequential.Purples_r
         )
+        fig_bar.update_layout(
+            legend=dict(
+                x=0.85,        
+                y=0.5
+                )   
+            )
         st.plotly_chart(fig_bar, use_container_width=True)
 
     with r1c3:
         #Average cost by speed bin
         df_avg_cost_speed= df.groupby("Speed_Bin")["Estimated Total Comprehensive Cost"].mean().reset_index()
         fig_avg_cost_speed= px.bar(df_avg_cost_speed, x="Speed_Bin", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
-            title= "Average Estimated Cost by Speed Bin",labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"},                            
-            color_continuous_scale="Purples", text_auto=".2s")
-        # fig_avg_cost_speed.update_layout(
-        #     height=300, 
-        #     width=400,
-        #     margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
-        #     )
-        st.plotly_chart(fig_avg_cost_speed)
+            title= "Average Estimated Cost by Speed Bin",labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"}, text_auto=".2s")
+        fig_avg_cost_speed.update_layout(yaxis_tickprefix='$')
+        fig_avg_cost_speed.update_traces(marker_color='#5236ab')
+        st.plotly_chart(fig_avg_cost_speed)  
 
-
-# --- TAB 4 ---
-with tab4:    
+with tab4:
+    st.subheader(f"Temporal Patterns: {current_focus}")
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
+   # hour_map = {h: pd.to_datetime(h, format='%H').strftime('%-I %p') for h in range(24)}
+    # heat_df['PRETTY_HOUR'] = heat_df['HOUR'].map(hour_map)
     fig_heat = px.density_heatmap(
         heat_df,
         x="HOUR",
         y="DAY_NAME",
         z="Count",
-        title= "Number of Accidents by Day and Hour",
+       # custom_data=["PRETTY_HOUR"], 
+        title= "Number of Crashes by Day and Hour",
+        labels={"DAY_NAME": "Day", "HOUR": "Hour", "Count": "Number of Crashes"},
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
+    )
+   # fig_heat.update_traces(
+   #     hovertemplate="<b>Time:</b> %{customdata[0]}<br><b>Day:</b> %{y}<br><b>Crashes:</b> %{z}<extra></extra>"
+   # )    
+    tick_vals = [0, 3, 6, 9, 12, 15, 18, 21]
+    tick_text = ["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
+    fig_heat.update_layout(
+        xaxis = dict(
+            tickmode = 'array',
+            tickvals = tick_vals,
+            ticktext = tick_text
+        )
+    )
+    #Defining number of bins
+    fig_heat.update_traces(
+        xbins=dict(
+            start=0,
+            end=24,
+            size=3  # 24 hours / 8 bins = size of 3
+        ),
+        autobinx=False
     )
     st.plotly_chart(fig_heat, use_container_width=True)
 
     #Average cost by speed bin
     df_avg_cost_hour= df.groupby("HOUR")["Estimated Total Comprehensive Cost"].mean().reset_index()
-    fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
-        title= "Average Estimated Cost by Hour",                            
-        color_continuous_scale="Purples", text_auto=".2s")
-    # fig_avg_cost_speed.update_layout(
-    #     height=300, 
-    #     width=400,
-    #     margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
-    #     )
+    fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", title= "Average Estimated Cost by Hour", text_auto=".2s")
+    fig_avg_cost_hour.update_layout(yaxis_tickprefix='$')
+    fig_avg_cost_hour.update_xaxes(
+        tickvals=[0, 3, 6, 9, 12, 15, 18, 21],
+        ticktext=["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
+    )
+    fig_avg_cost_hour.update_traces(marker_color='#5236ab')
     st.plotly_chart(fig_avg_cost_hour)
 
     #Severity Breakdown by Hour
+    severity_color_map = {
+        'Fatal': '#991f3d',
+        'Serious Injury': '#e31937',
+        'Minor Injury': '#ff6a00',
+        'Possible Injury': '#f1a425',
+        'No Injury': '#128354',
+        'Unknown': '#cccccc'
+        }
     df_hour_severity= df.groupby(["HOUR", "Severity_Label"]).size().reset_index(name="Accident_Count")
     fig_bar = px.bar(
         df_hour_severity,
         x="HOUR",
         y="Accident_Count",
         color="Severity_Label",
-        title="Number of Accidents by Hour and Severity",
-        labels={"Accident_Count": "Number of Accidents", "Severity_Label": "Severity Label"},
-        # This ensures the bars are stacked rather than grouped
+        title="Number of Crashes by Hour and Severity",
+        labels={"Accident_Count": "Number of Crashes", "Severity_Label": "Severity Label"},
         barmode="stack",
-        # Optional: Define a specific order for the severity levels in the legend
         category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
-        color_discrete_sequence=px.colors.sequential.Purples_r
+        color_discrete_map= severity_color_map
+    )
+    fig_bar.update_xaxes(
+        tickvals=[0, 3, 6, 9, 12, 15, 18, 21],
+        ticktext=["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
 
-# --- TAB 5 ---
 with tab5:
-    st.subheader("Economic Impact by Transportation Type")
-    st.write("##### This page shows the cost of accidents in which a pedestrian, bicycle, or motorcycle were involved.")
+    st.subheader(f"Economic Impact by Transportation Type: {current_focus}")
+    #st.subheader(f"Crash Risk Profile: {current_focus}")
+    st.write("##### This page shows the cost of crashes in which a pedestrian, bicycle, or motorcycle were involved.")
     st.markdown("<br>", unsafe_allow_html=True)
 
     modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", "Commercial Veh"]
@@ -832,9 +567,10 @@ with tab5:
 
         c1, c2 = st.columns(2)
         with c1:
-            st.write("**Average Economic Cost per Incident**")
-            fig_avg = px.bar(mode_df, x="Mode", y="Average Cost", color="Average Cost",
-                             color_continuous_scale="Purples", text_auto=".2s")
+            st.write("**Average Economic Cost per Crash**")
+            fig_avg = px.bar(mode_df, x="Mode", y="Average Cost", text_auto=".2s")
+            fig_avg.update_traces(marker_color='#5236ab')
+            fig_avg.update_layout(yaxis_tickprefix='$')
             st.plotly_chart(fig_avg, use_container_width=True)
 
         with c2:
@@ -847,292 +583,103 @@ with tab5:
         st.write("**Mode Vulnerability Matrix (Volume vs. Average Cost)**")
         fig_bubble = px.scatter(mode_df, x="Count", y="Average Cost", size="Total Impact",
                                 color="Mode", hover_name="Mode", size_max=60)
+        fig_bubble.update_layout(yaxis_tickprefix='$')
         st.plotly_chart(fig_bubble, use_container_width=True)
     else:
         st.warning("No Mode-specific data found in the current selection.")
 
-
-# --- ✅ TAB 6 (YOUR PRESCRIPTIVE ACTIONS) ---
 with tab6:
-
-    # ---------- Local scoped CSS for tidy spacing ----------
-    top_css = """
-    <style>
-      .presc-top h3,
-      .presc-top p {
-        margin-top: 0.15rem !important;
-        margin-bottom: 0.35rem !important;
-      }
-
-      .presc-top .left-panel {
-        border: 1px solid rgba(49,51,63,0.12);
-        border-radius: 10px;
-        padding: 0.6rem 0.75rem;
-        background: var(--secondary-background-color);
-      }
-
-      .presc-top .kpi-card {
-        border: 1px solid rgba(49,51,63,0.12);
-        border-radius: 10px;
-        padding: 0.75rem 0.9rem;
-        background: var(--background-color);
-        margin-bottom: 0.4rem;
-      }
-
-      .presc-top .kpi-title {
-        font-size: 0.85rem;
-        color: var(--secondary-text-color);
-        margin: 0 0 0.15rem 0;
-      }
-
-      .presc-top .kpi-value {
-        font-weight: 600;
-        font-size: 32px !important;
-        line-height: 1.1;
-        margin: 0 0 0.1rem 0;
-      }
-
-      .presc-top .kpi-foot {
-        color: var(--secondary-text-color);
-        font-size: 0.8rem;
-        margin: 0;
-      }
-
-      @media (min-width: 768px) {
-        .presc-top .sticky-col {
-          position: sticky;
-          top: 3.5rem;
-        }
-      }
-    </style>
-    """
-
-    st.markdown(top_css, unsafe_allow_html=True)
-    st.markdown('<div class="presc-top">', unsafe_allow_html=True)
-
-    # ---------- Title ----------
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
-
-    # ---------- Data prep ----------
-    if df_prescriptive_raw is None:
-        st.error(f"Prescriptive dataset failed to load: {prescriptive_load_error}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.stop()
-
-    try:
+    
+    if df_prescriptive_raw is not None:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
-    except Exception as e:
-        st.error(f"Prescriptive data validation error: {e}")
-        st.write("Columns found:", list(df_prescriptive_raw.columns))
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.stop()
-
-    # Remove "no-change"
-    dfp = dfp[dfp["best_action"] != "no_change"].copy()
-
-    # Apply global corridor if selected
-    if selected_street not in ["All Corridors", "--- Full Street List ---"]:
-        dfp = dfp[dfp["address"].str.contains(selected_street, case=False, na=False)].copy()
-
-    if dfp.empty:
-        st.warning("No prescriptive records match the current corridor selection.")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.stop()
-
-    all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
-
-    # ======================================================
-    # TOP LAYOUT: Filters (Left) + KPIs (Right)
-    # ======================================================
-    colL, colR = st.columns([3, 2], gap="small")
-
-    # ---------- LEFT FILTER PANEL ----------
-    with colL:
-        st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
-
-        selected_actions = st.multiselect(
-            "Recommended action",
-            options=all_actions,
-            default=all_actions,
-            key="presc_actions"
-        )
-
-        top_n = st.slider(
-            "Top N locations",
-            min_value=10,
-            max_value=300,
-            value=50,
-            step=10,
-            key="presc_topn"
-        )
-
-        # Advanced filters
-        with st.expander("More filters"):
-            if "severity" in dfp.columns:
-                sevs = sorted(dfp["severity"].dropna().unique().tolist())
-                st.multiselect("Severity", sevs, key="presc_severity")
-
-            if "district" in dfp.columns:
-                dists = sorted(dfp["district"].dropna().unique().tolist())
-                st.multiselect("District", dists, key="presc_district")
-
-        st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # ---------- Apply filters to data ----------
-    dfp_f = dfp[dfp["best_action"].isin(st.session_state.get("presc_actions", all_actions))].copy()
-
-    if st.session_state.get("presc_severity"):
-        if "severity" in dfp_f.columns:
-            dfp_f = dfp_f[dfp_f["severity"].isin(st.session_state["presc_severity"])]
-
-    if st.session_state.get("presc_district"):
-        if "district" in dfp_f.columns:
-            dfp_f = dfp_f[dfp_f["district"].isin(st.session_state["presc_district"])]
-
-    if dfp_f.empty:
-        st.warning("No data matches your filters. Select more options.")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.stop()
-
-    df_topn = (
-        dfp_f.sort_values("expected_reduction_amount", ascending=False)
-        .head(st.session_state["presc_topn"])
-    )
-
-    # ---------- RIGHT KPI STACK ----------
-    with colR:
-
-        def _kpi_card(title, value, foot=None, *, size_rem=2.2, gap_px=4, height_px=100):
-            """
-            Renders a compact KPI card with explicit font family and minimal spacing.
+        if selected_street != "All Corridors":
+            dfp = dfp[dfp["address_short"].str.contains(selected_street, case=False, na=False)]
+        all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
         
-            Args:
-                title (str): KPI title (small, subtle)
-                value (str): KPI value (big, bold)
-                foot (str|None): Optional footnote/delta
-                size_rem (float): Font size for value (in rem). Try 1.9–2.6
-                gap_px (int): Space below the outer card (px). Use 0–8
-                height_px (int): Iframe height. Lower = less whitespace. Try 90–120
-            """
-            html(f"""
-                <html>
-                    <head>
-                        <style>
-                            /* Reset iframe defaults to eliminate unexpected gaps */
-                            html, body {{
-                                padding: 0;
-                                margin: 0;
-                            }}
+        # top layout: filters + KPIs
+        colL, colR = st.columns([3, 2], gap="large")
+
+        with colL:
+            st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
+    
+            selected_actions = st.multiselect(
+                "Recommended action",
+                options=all_actions,
+                default=all_actions,
+                key="presc_actions"
+            )
+    
+            top_n = st.slider(
+                "Top N locations",
+                min_value=10,
+                max_value=300,
+                value=50,
+                step=10,
+                key="presc_topn"
+            )
+    
+            with st.expander("More filters"):
+                if "severity" in dfp.columns:
+                    sevs = sorted(dfp["severity"].dropna().unique().tolist())
+                    st.multiselect("Severity", sevs, key="presc_severity")
+    
+                if "district" in dfp.columns:
+                    dists = sorted(dfp["district"].dropna().unique().tolist())
+                    st.multiselect("District", dists, key="presc_district")
+    
+            st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
+    
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            dfp_f = dfp[dfp["best_action"].isin(st.session_state.get("presc_actions", all_actions))].copy()
         
-                            /* Match Streamlit's default font stack */
-                            .kpi-root * {{
-                                font-family:
-                                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-                                    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-                                color: var(--text-color);
-                            }}
+            if st.session_state.get("presc_severity"):
+                if "severity" in dfp_f.columns:
+                    dfp_f = dfp_f[dfp_f["severity"].isin(st.session_state["presc_severity"])]
         
-                            .kpi-card {{
-                                border: 1px solid rgba(49,51,63,0.12);
-                                border-radius: 10px;
-                                padding: 10px 12px;      /* compact inner padding */
-                                margin: 0 0 {gap_px}px 0; /* control space between cards */
-                                background: var(--background-color);
-                            }}
+            if st.session_state.get("presc_district"):
+                if "district" in dfp_f.columns:
+                    dfp_f = dfp_f[dfp_f["district"].isin(st.session_state["presc_district"])]
         
-                            .kpi-title {{
-                                font-size: 0.9rem;
-                                color: var(--secondary-text-color);
-                                margin: 0 0 4px 0;       /* tight spacing above the value */
-                                font-weight: 400;
-                            }}
+            if dfp_f.empty:
+                st.warning("No data matches your filters. Select more options.")
+                st.markdown('</div>', unsafe_allow_html=True)
+                st.stop()
         
-                            .kpi-value {{
-                                font-size: {size_rem}rem; /* BIG, TUNABLE */
-                                font-weight: 600;         /* max bold */
-                                line-height: 1.1;
-                                margin: 0 0 2px 0;       /* tighten space above footnote */
-                                color: var(--text-color);
-                            }}
-        
-                            .kpi-foot {{
-                                font-size: 0.8rem;
-                                color: var(--secondary-text-color);
-                                margin: 0;
-                                font-weight: 400;
-                            }}
-                        </style>
-                    </head>
-                    <body>
-                        <div class="kpi-root">
-                            <div class="kpi-card">
-                                <div class="kpi-title">{title}</div>
-                                <div class="kpi-value">{value}</div>
-                                {f'<div class="kpi-foot">{foot}</div>' if foot else ''}
-                            </div>
-                        </div>
-                    </body>
-                </html>
-            """, height=height_px)
+            df_topn = (
+                dfp_f.sort_values("expected_reduction_amount", ascending=False)
+                .head(st.session_state["presc_topn"])
+            )
+        with colR:
+            # KPI 1 — total expected reduction
+            total_reduction = float(df_topn["expected_reduction_amount"].sum())
+    
+            # KPI 2 — median pct reduction
+            if "pct_reduction" in df_topn.columns:
+                pct_series = df_topn["pct_reduction"]
+                if pct_series.max() > 1.0:
+                    pct_series = pct_series / 100.0
+                median_pct_display = f"{float(pct_series.median()):.1%}"
+            else:
+                median_pct_display = "—"
+    
+            # KPI 3 — number of top-N locations
+            locations_display = f"{len(df_topn):,}"
+           
+            with st.container():
+                st.metric("Total Expected Reduction", f"{total_reduction:,.0f}")
+                st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
+            
+                st.metric("Median % Reduction", median_pct_display)
+                st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
+            
+                st.metric("Locations in Scope", locations_display)
 
-        # KPI 1 — total expected reduction
-        total_reduction = float(df_topn["expected_reduction_amount"].sum())
-
-        # KPI 2 — median pct reduction
-        if "pct_reduction" in df_topn.columns:
-            pct_series = df_topn["pct_reduction"]
-            if pct_series.max() > 1.0:
-                pct_series = pct_series / 100.0
-            median_pct_display = f"{float(pct_series.median()):.1%}"
-        else:
-            median_pct_display = "—"
-
-        # KPI 3 — number of top-N locations
-        locations_display = f"{len(df_topn):,}"
-
-        # Render KPI cards
-        # _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}")
-        # _kpi_card("Median % Reduction", median_pct_display)
-        # _kpi_card("Locations in Scope", locations_display)
-
-        _kpi_card("Total Expected Reduction", f"{total_reduction:,.0f}", size_rem=2.1, gap_px=4, height_px=95)
-        _kpi_card("Median % Reduction", median_pct_display, size_rem=2.0, gap_px=4, height_px=95)
-        _kpi_card("Locations in Scope", locations_display, size_rem=2.0, gap_px=4, height_px=95)
-
-    # Close the top wrapper
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ======================================================
-    # FULL-WIDTH CONTENT
-    # ======================================================
-    st.divider()
-
-    # Map
-    st.subheader(f"Impact map (Top {st.session_state['presc_topn']} | color = action)")
-    build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
-
-    st.divider()
-
-    # Portfolio summary
-    action_bars(dfp_f)
-
-    st.divider()
-
-    # Table + detail view
-    ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
-
-    # Notes
-    with st.expander("Notes & tips"):
-        st.markdown(
-            """
-            **Map encoding**
-            - **Color**: `best_action`
-
-            **Percent normalization**
-            - If `pct_reduction` is 0–100, it is converted to 0–1 automatically.
-            - If it's already 0–1, it stays as-is.
-            """
-        )
+            # end top layout
+        build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
+        action_bars(dfp_f, top_n=st.session_state["presc_topn"])
+        ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
+    else:
+        st.error("Prescriptive data unavailable.")
