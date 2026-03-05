@@ -623,7 +623,7 @@ with tab5:
         m1, m2, m3 = st.columns(3)
         m1.metric("Highest Avg Cost Mode", top_mode["Transportation Mode"])
         m2.metric("Avg Cost (Highest)", f"${top_mode['Average Cost per Accident']:,.0f}")
-        m3.metric("Total Modes Analyzed", len(mode_df))
+        m3.metric("Total Modes of Transportation Analyzed", len(mode_df))
 
         st.markdown("<br>", unsafe_allow_html=True)
 
