@@ -369,7 +369,7 @@ with tab2:
         fig_bar.update_traces(marker_color=bar_colors)
         
         fig_bar.update_layout(
-            xaxis_title="Total Cost",
+            xaxis_title="Cost",
             yaxis_title=None,
             xaxis=dict(
                 tickprefix="$", 
