@@ -584,44 +584,114 @@ with tab4:
 
 
 with tab5:
-    st.subheader(f"Economic Impact by Transportation Type: {current_focus}")
-    #st.subheader(f"Crash Risk Profile: {current_focus}")
-    st.write("##### This page shows the cost of crashes in which a pedestrian, bicycle, or motorcycle were involved.")
+    st.subheader(f"📊 Economic Impact by Transportation Type: {current_focus}")
+    st.write("""
+        This analysis breaks down the economic burden of crashes based on the modes of transportation involved. 
+        **Comprehensive Cost** includes medical expenses, lost productivity, property damage, and the monetized value of pain and suffering.
+    """)
+    
     st.markdown("<br>", unsafe_allow_html=True)
 
-    modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", "Commercial Veh"]
+    # 1. Define all modes including the new ones from the data pipeline
+    modes = [
+        "Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", 
+        "Commercial Veh", "Micromobility", "E-Scooter", 
+        "Large Passenger Veh", "Train", "Motor Vehicle", "Other"
+    ]
+    
     mode_stats = []
 
+    # 2. Calculate statistics for each mode
     for m in modes:
-        subset = df[df[m] == 1]
-        if not subset.empty:
-            avg_cost = subset["Estimated Total Comprehensive Cost"].mean()
-            total_impact = subset["Estimated Total Comprehensive Cost"].sum()
-            mode_stats.append({"Mode": m, "Average Cost": avg_cost, "Total Impact": total_impact, "Count": len(subset)})
+        if m in df.columns:
+            subset = df[df[m] == 1]
+            if not subset.empty:
+                avg_cost = subset["Estimated Total Comprehensive Cost"].mean()
+                total_impact = subset["Estimated Total Comprehensive Cost"].sum()
+                mode_stats.append({
+                    "Transportation Mode": m, 
+                    "Average Cost per Accident": avg_cost, 
+                    "Total Economic Burden": total_impact, 
+                    "Number of Accidents": len(subset)
+                })
 
     if mode_stats:
-        mode_df = pd.DataFrame(mode_stats)
+        mode_df = pd.DataFrame(mode_stats).sort_values("Average Cost per Accident", ascending=False)
 
-        c1, c2 = st.columns(2)
-        with c1:
-            st.write("**Average Economic Cost per Crash**")
-            fig_avg = px.bar(mode_df, x="Mode", y="Average Cost", text_auto=".2s")
-            fig_avg.update_traces(marker_color='#5236ab')
-            fig_avg.update_layout(yaxis_tickprefix='$')
-            st.plotly_chart(fig_avg, use_container_width=True)
+        # 3. Summary Metrics for "Additional Helpful Information"
+        top_mode = mode_df.iloc[0]
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Highest Avg Cost Mode", top_mode["Transportation Mode"])
+        m2.metric("Avg Cost (Highest)", f"${top_mode['Average Cost per Accident']:,.0f}")
+        m3.metric("Total Modes Analyzed", len(mode_df))
 
-        with c2:
-            st.write("**Total Economic Burden (Sum)**")
-            fig_total = px.pie(mode_df, names="Mode", values="Total Impact",
-                               color_discrete_sequence=px.colors.sequential.Purples_r)
-            st.plotly_chart(fig_total, use_container_width=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # 4. Average Economic Cost Bar Chart (Spaced out full-width)
+        st.write("### 💰 Average Economic Cost per Accident")
+        st.info("This chart identifies which types of accidents are the most 'expensive' on average, often highlighting the severity of incidents involving vulnerable road users.")
+        
+        fig_avg = px.bar(
+            mode_df, 
+            x="Transportation Mode", 
+            y="Average Cost per Accident", 
+            text_auto=".2s",
+            template="plotly_white",
+            labels={"Average Cost per Accident": "Average Cost ($)"}
+        )
+        fig_avg.update_traces(marker_color='#5236ab', textposition="outside")
+        fig_avg.update_layout(
+            yaxis_tickprefix='$',
+            yaxis_tickformat=',.0f',
+            xaxis_title=None,
+            height=500
+        )
+        st.plotly_chart(fig_avg, use_container_width=True)
 
         st.markdown("---")
-        st.write("**Mode Vulnerability Matrix (Volume vs. Average Cost)**")
-        fig_bubble = px.scatter(mode_df, x="Count", y="Average Cost", size="Total Impact",
-                                color="Mode", hover_name="Mode", size_max=60)
-        fig_bubble.update_layout(yaxis_tickprefix='$')
+
+        # 5. Enhanced Bubble Chart (Vulnerability Matrix)
+        st.write("### 🎯 Mode Vulnerability Matrix")
+        st.write("""
+            **How to read this chart:**
+            - **X-Axis (Horizontal):** Higher numbers mean these accidents happen more frequently.
+            - **Y-Axis (Vertical):** Higher positions mean these accidents are more severe/costly per incident.
+            - **Bubble Size:** Represents the **Total Economic Burden** (the sum of all costs for that mode).
+            
+            *Target the top-left for high-severity/low-volume risks and the bottom-right for high-volume systemic issues.*
+        """)
+
+        fig_bubble = px.scatter(
+            mode_df, 
+            x="Number of Accidents", 
+            y="Average Cost per Accident", 
+            size="Total Economic Burden",
+            color="Transportation Mode", 
+            hover_name="Transportation Mode",
+            size_max=60,
+            template="plotly_white",
+            labels={
+                "Number of Accidents": "Total Number of Accidents",
+                "Average Cost per Accident": "Average Cost per Incident ($)",
+                "Total Economic Burden": "Total Economic Impact ($)"
+            }
+        )
+        
+        fig_bubble.update_layout(
+            yaxis_tickprefix='$',
+            yaxis_tickformat=',.0f',
+            xaxis_tickformat=',d',
+            legend_title="Mode",
+            height=600,
+            hovermode="closest"
+        )
+        
+        # Add a reference line for average across all modes
+        avg_all = mode_df["Average Cost per Accident"].mean()
+        fig_bubble.add_hline(y=avg_all, line_dash="dot", annotation_text="Mean Avg Cost", annotation_position="bottom right")
+        
         st.plotly_chart(fig_bubble, use_container_width=True)
+        
     else:
         st.warning("No Mode-specific data found in the current selection.")
 
