@@ -349,14 +349,36 @@ with tab1:
         st.plotly_chart(fig_crash_count)
 
 with tab2:
-    col_list, col_map = st.columns([1, 2])
+    col_list, col_map = st.columns([1, 2])   
     with col_list:
-        st.subheader("🔥 Top 10 Risk Corridors")
+        st.subheader("🔥 Top 10 Risk Corridors")      
+        # Data Processing
         risk_df = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).reset_index()
-        risk_df.columns = ["Street", "Cost"]
-        bar_colors = ["#4B0082" if s == selected_street else "#D8BFD8" for s in risk_df["Street"]]
-        fig_bar = px.bar(risk_df, x="Cost", y="Street", orientation="h", template="plotly_white")
+        risk_df.columns = ["Street", "Cost"]        
+        # Color Logic
+        bar_colors = ["#4B0082" if s == selected_street else "#D8BFD8" for s in risk_df["Street"]]        
+        # Create Figure
+        fig_bar = px.bar(
+            risk_df, 
+            x="Cost", 
+            y="Street", 
+            orientation="h", 
+            template="plotly_white"
+        )       
+        # Update Traces and Axis Formatting
         fig_bar.update_traces(marker_color=bar_colors)
+        
+        fig_bar.update_layout(
+            xaxis_title="Total Cost",
+            yaxis_title=None,
+            xaxis=dict(
+                tickprefix="$", 
+                tickformat=",d"  # Adds commas for thousands (e.g., $1,000)
+            )
+        )      
+        # Adjust Y-axis to ensure the bars are sorted correctly (highest at top)
+        fig_bar.update_yaxes(autorange="reversed")
+        
         st.plotly_chart(fig_bar, use_container_width=True)
 
     with col_map:
