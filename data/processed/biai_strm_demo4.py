@@ -603,6 +603,21 @@ with tab5:
             fig_avg.update_layout(yaxis_tickprefix='$')
             st.plotly_chart(fig_avg, use_container_width=True)
 
+        with c2:
+            st.write("**Total Economic Burden (Sum)**")
+            fig_total = px.pie(mode_df, names="Mode", values="Total Impact",
+                               color_discrete_sequence=px.colors.sequential.Purples_r)
+            st.plotly_chart(fig_total, use_container_width=True)
+
+        st.markdown("---")
+        st.write("**Mode Vulnerability Matrix (Volume vs. Average Cost)**")
+        fig_bubble = px.scatter(mode_df, x="Count", y="Average Cost", size="Total Impact",
+                                color="Mode", hover_name="Mode", size_max=60)
+        fig_bubble.update_layout(yaxis_tickprefix='$')
+        st.plotly_chart(fig_bubble, use_container_width=True)
+    else:
+        st.warning("No Mode-specific data found in the current selection.")
+
 with tab6:
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
