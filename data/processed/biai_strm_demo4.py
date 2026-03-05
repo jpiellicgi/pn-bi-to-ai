@@ -355,7 +355,7 @@ with tab2:
         risk_df = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).reset_index()
         risk_df.columns = ["Street", "Cost"]
         bar_colors = ["#4B0082" if s == selected_street else "#D8BFD8" for s in risk_df["Street"]]
-        fig_bar = px.bar(risk_df, x="Cost $", y="Street", orientation="h", template="plotly_white")
+        fig_bar = px.bar(risk_df, x="Costtt", y="Street", orientation="h", template="plotly_white")
         fig_bar.update_traces(marker_color=bar_colors)
         st.plotly_chart(fig_bar, use_container_width=True)
 
