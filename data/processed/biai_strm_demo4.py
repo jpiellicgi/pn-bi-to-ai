@@ -163,6 +163,12 @@ def fmt_dollars(x):
         return f"${float(x):,.0f}" if pd.notnull(x) else "—"
     except: return "—"
 
+def pretty_action(a: str) -> str:
+    """Display-friendly action label: 'micromobility_zones' -> 'micromobility zones'"""
+    if a is None:
+        return ""
+    return str(a).replace("_", " ").strip()
+
 @st.cache_data(show_spinner=False)
 def prepare_prescriptive_df(df_prescriptive):
     df = df_prescriptive.copy()
@@ -173,24 +179,51 @@ def prepare_prescriptive_df(df_prescriptive):
     df["location_id"] = make_location_id(df)
     df["address_short"] = df["Address"].astype(str).map(lambda x: compact_text(x, 80))
     df["ai_rationale_short"] = df["ai_rationale"].astype(str).map(lambda x: compact_text(x, 160))
+    df["best_action_label"] = df["best_action"].apply(pretty_action)
+    return df
     return df
 
 def build_map(df, top_n=50, all_actions=None):
+    # Ensure display label column exists
+    if "best_action_label" not in df.columns:
+        df = df.copy()
+        df["best_action_label"] = df["best_action"].apply(pretty_action)
+
     # Sort and take top N
     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
 
     # Legend/category order
     if all_actions is None:
         all_actions = list(df_map["best_action"].dropna().unique())
+    # Build label order in the same order as actions, but de-duplicated and aligned
+    pairs = (
+        df_map[["best_action", "best_action_label"]]
+        .dropna()
+        .drop_duplicates()
+    )
+    # Preserve the original actions order but map to their labels
+    label_order = [pairs.loc[pairs["best_action"] == a, "best_action_label"].iloc[0] 
+                   for a in all_actions if a in pairs["best_action"].values]
 
     # Color mapping (fallback to gray if missing)
-    ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}    
+    ACTION_COLORS_RGB = {
+        "reduce_speed_limit": (227, 25, 55),
+        "increase_enforcement": (82, 54, 171),
+        "improve_crosswalks": (110, 63, 237),
+        "add_speed_bumps": (168, 36, 101)
+    }
     def _rgb_to_plotly(rgb_tuple):
         r, g, b = rgb_tuple
         return f"rgb({r},{g},{b})"
     ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
     DEFAULT_COLOR = "rgb(120,120,120)"
-    color_map = {a: ACTION_COLORS.get(a, DEFAULT_COLOR) for a in all_actions}
+
+    # Map pretty labels to colors using the original action color if we have it
+    label_to_color = {}
+    for _, row in pairs.iterrows():
+        orig = row["best_action"]
+        lbl = row["best_action_label"]
+        label_to_color[lbl] = ACTION_COLORS.get(orig, DEFAULT_COLOR)
 
     # Center map on data
     center_lat = df_map["latitude"].mean()
@@ -200,10 +233,10 @@ def build_map(df, top_n=50, all_actions=None):
         df_map,
         lat="latitude",
         lon="longitude",
-        color="best_action",
-        color_discrete_map=color_map,
-        category_orders={"best_action": all_actions},
-        hover_name="best_action",
+        color="best_action_label",  # <- pretty labels in legend
+        color_discrete_map=label_to_color,
+        category_orders={"best_action_label": label_order},
+        hover_name="best_action_label",
         hover_data={
             "expected_reduction_amount": ":,.0f",
             "latitude": False,
@@ -223,22 +256,109 @@ def build_map(df, top_n=50, all_actions=None):
     )
 
     st.plotly_chart(fig, use_container_width=True)
+# def build_map(df, top_n=50, all_actions=None):
+#     # Sort and take top N
+#     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
 
-def action_bars(df,top_n=50):
+#     # Legend/category order
+#     if all_actions is None:
+#         all_actions = list(df_map["best_action"].dropna().unique())
+
+#     # Color mapping (fallback to gray if missing)
+#     ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}    
+#     def _rgb_to_plotly(rgb_tuple):
+#         r, g, b = rgb_tuple
+#         return f"rgb({r},{g},{b})"
+#     ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
+#     DEFAULT_COLOR = "rgb(120,120,120)"
+#     color_map = {a: ACTION_COLORS.get(a, DEFAULT_COLOR) for a in all_actions}
+
+#     # Center map on data
+#     center_lat = df_map["latitude"].mean()
+#     center_lon = df_map["longitude"].mean()
+
+#     fig = px.scatter_mapbox(
+#         df_map,
+#         lat="latitude",
+#         lon="longitude",
+#         color="best_action",
+#         color_discrete_map=color_map,
+#         category_orders={"best_action": all_actions},
+#         hover_name="best_action",
+#         hover_data={
+#             "expected_reduction_amount": ":,.0f",
+#             "latitude": False,
+#             "longitude": False,
+#         },
+#         zoom=10,
+#         center=dict(lat=center_lat, lon=center_lon),
+#         height=550,
+#     )
+
+#     # Marker and layout tweaks
+#     fig.update_traces(marker=dict(size=10, opacity=0.9))
+#     fig.update_layout(
+#         mapbox_style="open-street-map",  # <- no Mapbox token required
+#         margin=dict(l=0, r=0, t=0, b=0),
+#         legend_title_text="Recommended action",
+#     )
+
+#     st.plotly_chart(fig, use_container_width=True)
+
+# def action_bars(df,top_n=50):
+#     # Sort and take top N
+#     df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+#     agg = df_bar.groupby("best_action").agg(total_reduction=("expected_reduction_amount", "sum"), locations=("location_id", "count")).reset_index()
+#     c1, c2 = st.columns(2)
+#     c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="total_reduction:Q"), use_container_width=True)
+#     c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="locations:Q"), use_container_width=True)
+def action_bars(df, top_n=50):
+    # Ensure label column exists
+    if "best_action_label" not in df.columns:
+        df = df.copy()
+        df["best_action_label"] = df["best_action"].apply(pretty_action)
+
     # Sort and take top N
     df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-    agg = df_bar.groupby("best_action").agg(total_reduction=("expected_reduction_amount", "sum"), locations=("location_id", "count")).reset_index()
-    c1, c2 = st.columns(2)
-    c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="total_reduction:Q"), use_container_width=True)
-    c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="locations:Q"), use_container_width=True)
+    agg = (
+        df_bar
+        .groupby("best_action_label")
+        .agg(total_reduction=("expected_reduction_amount", "sum"),
+             locations=("location_id", "count"))
+        .reset_index()
+    )
 
+    c1, c2 = st.columns(2)
+    c1.altair_chart(
+        alt.Chart(agg).mark_bar(color="#5236ab").encode(
+            x=alt.X("best_action_label:N", sort='-y', title="Recommended action"),
+            y=alt.Y("total_reduction:Q", title="Total expected reduction ($)")
+        ),
+        use_container_width=True
+    )
+    c2.altair_chart(
+        alt.Chart(agg).mark_bar(color="#5236ab").encode(
+            x=alt.X("best_action_label:N", sort='-y', title="Recommended action"),
+            y=alt.Y("locations:Q", title="Number of locations")
+        ),
+        use_container_width=True
+    )
 def ranked_table_and_details(df, top_n):
     left, right = st.columns([1.35, 1])
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
     with left:
         st.subheader(f"Top {top_n} locations by expected reduction")
-        show_columns = ["Address", "location_id", "best_action", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]
-        ranked_display = ranked[show_columns].rename(columns={"address": "Address","pct_reduction_norm": "pct_reduction","ai_rationale_short": "ai_rationale (short)",})
+        # show_columns = ["Address", "location_id", "best_action", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]
+        # ranked_display = ranked[show_columns].rename(columns={"address": "Address","pct_reduction_norm": "pct_reduction","ai_rationale_short": "ai_rationale (short)",})
+        show_columns = [
+            "Address", "location_id", "best_action_label", "expected_reduction_amount",
+            "pct_reduction_norm", "pred_est_ttl_comp_cost", "expected_cost_after_action", "ai_rationale_short"
+        ]
+        ranked_display = ranked[show_columns].rename(columns={
+            "best_action_label": "best_action",
+            "pct_reduction_norm": "pct_reduction",
+            "ai_rationale_short": "ai_rationale (short)",
+        })
         ranked_display["expected_reduction_amount"] = ranked_display["expected_reduction_amount"].map(fmt_dollars)
         ranked_display["expected_cost_after_action"] = ranked_display["expected_cost_after_action"].map(fmt_dollars)
         ranked_display["pred_est_ttl_comp_cost"] = ranked_display["pred_est_ttl_comp_cost"].map(fmt_dollars)
@@ -254,7 +374,7 @@ def ranked_table_and_details(df, top_n):
             row = df.loc[df["location_id"] == selected_loc].iloc[0]
             st.markdown(
                 f"""
-                **Action:** {row['best_action']}  
+                **Action:** {row.get('best_action_label', pretty_action(row.get('best_action', '')))}
                 **Risk score:** `{fmt_dollars(row['pred_est_ttl_comp_cost'])}`   
                 **Expected reduction:** `{fmt_dollars(row['expected_reduction_amount'])}`  
                 **% reduction:** {row['pct_reduction_norm'] * 100:.1f}%  
@@ -767,6 +887,7 @@ with tab6:
         if selected_street != "All Corridors":
             dfp = dfp[dfp["address_short"].str.contains(selected_street, case=False, na=False)]
         all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
+        all_action_labels = [pretty_action(a) for a in all_actions]  # (used implicitly by build_map)
         
         # top layout: filters + KPIs
         colL, colR = st.columns([3, 2], gap="large")
@@ -848,7 +969,10 @@ with tab6:
                 st.metric("Locations in Scope", locations_display)
 
             # end top layout
-        build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
+    
+        selected_action_labels = [pretty_action(a) for a in st.session_state.get("presc_actions", all_actions)]
+        build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=st.session_state.get("presc_actions", all_actions))
+        # build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
         action_bars(dfp_f, top_n=st.session_state["presc_topn"])
         ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
     else:
