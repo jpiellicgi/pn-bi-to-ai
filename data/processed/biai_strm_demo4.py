@@ -453,8 +453,11 @@ with col_map:
     st.plotly_chart(fig_m, use_container_width=True)
 
 with tab3:
-    st.subheader(f"Crash Risk Profile: {current_focus}")
+    st.subheader(f"🛡️ Crash Risk Profile: {current_focus}")
+    
+    # --- ROW 1: Existing Formatting ---
     r1c1, r1c2, r1c3 = st.columns(3) 
+
     with r1c1:
         severity_color_map = {
             'Fatal': '#991f3d',
@@ -463,31 +466,26 @@ with tab3:
             'Possible Injury': '#f1a425',
             'No Injury': '#128354',
             'Unknown': '#cccccc'
-            }
-        fig_pie = px.pie(df, names="Severity_Label", hole=0.4, color= "Severity_Label", color_discrete_map=severity_color_map, category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
-                         labels={"Severity_Label": "Severity Label"}, title='Crash Severity Breakdown')
+        }
+        fig_pie = px.pie(
+            df, 
+            names="Severity_Label", 
+            hole=0.4, 
+            color="Severity_Label", 
+            color_discrete_map=severity_color_map, 
+            category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+            labels={"Severity_Label": "Severity Label"}, 
+            title='Crash Severity Breakdown'
+        )
         fig_pie.update_layout(
             height=450, 
-            width=500,
             legend_title_text='Severity Label',
-            legend=dict(
-                x=0.85,        
-                y=0.5
-                )   
-            )
+            legend=dict(x=0.85, y=0.5)   
+        )
         st.plotly_chart(fig_pie, use_container_width=True)
     
     with r1c2:
-        #Crashes by Speed Limit and Severity
-        severity_color_map = {
-            'Fatal': '#991f3d',
-            'Serious Injury': '#e31937',
-            'Minor Injury': '#ff6a00',
-            'Possible Injury': '#f1a425',
-            'No Injury': '#128354',
-            'Unknown': '#cccccc'
-            }
-        df_speed_severity= df.groupby(["Speed_Bin", "Severity_Label"]).size().reset_index(name="Accident_Count")
+        df_speed_severity = df.groupby(["Speed_Bin", "Severity_Label"]).size().reset_index(name="Accident_Count")
         fig_bar = px.bar(
             df_speed_severity,
             x="Speed_Bin",
@@ -495,29 +493,80 @@ with tab3:
             color="Severity_Label",
             title="Crashes by Speed Limit and Severity",
             labels={"Accident_Count": "Number of Crashes", "Speed_Bin": "Speed Limit (mph)", "Severity_Label": "Severity Label"},
-            # This ensures the bars are stacked rather than grouped
             barmode="stack",
-            # Optional: Define a specific order for the severity levels in the legend
             category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
             color_discrete_map=severity_color_map
-            #color_discrete_sequence=px.colors.sequential.Purples_r
         )
         fig_bar.update_layout(
-            legend=dict(
-                x=0.85,        
-                y=0.5
-                )   
-            )
+            legend=dict(x=0.85, y=0.5),
+            xaxis_title="Posted Speed Limit"
+        )
         st.plotly_chart(fig_bar, use_container_width=True)
 
     with r1c3:
-        #Average cost by speed bin
-        df_avg_cost_speed= df.groupby("Speed_Bin")["Estimated Total Comprehensive Cost"].mean().reset_index()
-        fig_avg_cost_speed= px.bar(df_avg_cost_speed, x="Speed_Bin", y="Estimated Total Comprehensive Cost", color="Estimated Total Comprehensive Cost",
-            title= "Average Estimated Cost by Speed Bin",labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"}, text_auto=".2s")
-        fig_avg_cost_speed.update_layout(yaxis_tickprefix='$')
+        df_avg_cost_speed = df.groupby("Speed_Bin")["Estimated Total Comprehensive Cost"].mean().reset_index()
+        fig_avg_cost_speed = px.bar(
+            df_avg_cost_speed, 
+            x="Speed_Bin", 
+            y="Estimated Total Comprehensive Cost", 
+            color="Estimated Total Comprehensive Cost",
+            title="Average Estimated Cost by Speed Bin",
+            labels={"Estimated Total Comprehensive Cost": "Average Estimated Cost", "Speed_Bin": "Speed Limit (mph)"}, 
+            text_auto=".2s"
+        )
+        # Ensuring $ formatting remains on the Y-Axis
+        fig_avg_cost_speed.update_layout(
+            yaxis_tickprefix='$',
+            yaxis_tickformat=',.0f'
+        )
         fig_avg_cost_speed.update_traces(marker_color='#5236ab')
-        st.plotly_chart(fig_avg_cost_speed)  
+        st.plotly_chart(fig_avg_cost_speed, use_container_width=True)
+
+    # --- ROW 2: New Information on Other Modes ---
+    st.markdown("---")
+    st.write("### 🚲 Transportation Mode Involvement")
+    st.info("The chart below shows the frequency of each mode involved in the current selection. Note: A single crash may involve multiple modes (e.g., a Car vs. Bicycle incident).")
+
+    # 1. Prepare data for the 11 modes
+    modes = [
+        "Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", 
+        "Commercial Veh", "Micromobility", "E-Scooter", 
+        "Large Passenger Veh", "Train", "Motor Vehicle", "Other"
+    ]
+    
+    mode_counts = []
+    for m in modes:
+        if m in df.columns:
+            count = df[m].sum()
+            if count > 0:
+                mode_counts.append({"Mode": m, "Incident Count": count})
+    
+    if mode_counts:
+        mode_count_df = pd.DataFrame(mode_counts).sort_values("Incident Count", ascending=True)
+
+        # 2. Create a Horizontal Bar Chart for Mode Distribution
+        fig_modes = px.bar(
+            mode_count_df,
+            x="Incident Count",
+            y="Mode",
+            orientation='h',
+            title="Crash Frequency by Mode of Transportation",
+            text_auto=True,
+            template="plotly_white",
+            color="Incident Count",
+            color_continuous_scale="Purples"
+        )
+        
+        fig_modes.update_layout(
+            height=500,
+            xaxis_title="Total Number of Incidents",
+            yaxis_title=None,
+            coloraxis_showscale=False # Clean look
+        )
+        
+        st.plotly_chart(fig_modes, use_container_width=True)
+    else:
+        st.warning("No specific mode data found for the current selection.")
 
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
