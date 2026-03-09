@@ -9,6 +9,7 @@ import streamlit as st
 from streamlit.components.v1 import html
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import pydeck as pdk
 import altair as alt
 import requests
@@ -78,6 +79,15 @@ def read_csv_url(url: str) -> pd.DataFrame:
     return pd.read_csv(pd.io.common.BytesIO(r.content), low_memory=False)
 
 # ----------------------------
+# Data Formatting Function Definitions
+# ----------------------------
+def format_hour(hour):
+    if hour == 0: return "12 AM"
+    if hour < 12: return f"{hour} AM"
+    if hour == 12: return "12 PM"
+    return f"{hour - 12} PM"
+
+# ----------------------------
 # Data Pipeline
 # ----------------------------
 @st.cache_data(show_spinner=False)
@@ -92,6 +102,14 @@ def load_partner_data(url: str) -> pd.DataFrame:
     df["Year"] = df["Crash timestamp"].dt.year
     df["HOUR"] = df["Crash timestamp"].dt.hour
     df["DAY_NAME"] = df["Crash timestamp"].dt.day_name()
+
+    #Hour label formatting for visuals
+    df['hour_label'] = df['HOUR'].apply(format_hour)
+    labels_in_order = [format_hour(h) for h in range(24)]
+    df['hour_label'] = pd.Categorical(df['hour_label'], categories=labels_in_order, ordered=True)
+
+    #Hour range formatting for heatmap visual
+    #heat_df["Time_Range"] = heat_df["HOUR"].apply(get_range_label)
 
     sev_map = {1: "Fatal", 2: "Serious Injury", 3: "Minor Injury", 4: "Possible Injury", 0: "No Injury", 5: "Unknown"}
     df["Severity_Label"] = df["crash_sev_id"].map(sev_map)
@@ -619,7 +637,7 @@ with tab3:
         )
         fig_bar.update_layout(
             legend=dict(x=0.85, y=0.5),
-            xaxis_title="Posted Speed Limit"
+            xaxis_title="Speed Limit (mph)"
         )
         st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -691,22 +709,36 @@ with tab3:
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
-   # hour_map = {h: pd.to_datetime(h, format='%H').strftime('%-I %p') for h in range(24)}
-    # heat_df['PRETTY_HOUR'] = heat_df['HOUR'].map(hour_map)
+    def get_range_label(h):
+        start = (h // 3) * 3
+        end = start + 3
+        def fmt(hr):
+            hr = hr % 24
+            if hr == 0: return "12 AM"
+            if hr < 12: return f"{hr} AM"
+            if hr == 12: return "12 PM"
+            return f"{hr-12} PM"
+        return f"{fmt(start)} - {fmt(end)}"
+    
+    heat_df["Time_Range"] = heat_df["HOUR"].apply(get_range_label)
     fig_heat = px.density_heatmap(
         heat_df,
         x="HOUR",
         y="DAY_NAME",
         z="Count",
-       # custom_data=["PRETTY_HOUR"], 
         title= "Number of Crashes by Day and Hour",
         labels={"DAY_NAME": "Day", "HOUR": "Hour", "Count": "Number of Crashes"},
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
     )
-   # fig_heat.update_traces(
-   #     hovertemplate="<b>Time:</b> %{customdata[0]}<br><b>Day:</b> %{y}<br><b>Crashes:</b> %{z}<extra></extra>"
-   # )    
+    fig_heat.update_traces(
+        xbins=dict(start=0, end=24, size=3),
+        autobinx=False,
+        customdata=heat_df[["Time_Range"]],
+        hovertemplate=(
+        "<b>Number of Crashes:</b> %{z}<extra></extra>"
+        )
+    )
     tick_vals = [0, 3, 6, 9, 12, 15, 18, 21]
     tick_text = ["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
     fig_heat.update_layout(
@@ -716,55 +748,63 @@ with tab4:
             ticktext = tick_text
         )
     )
-    #Defining number of bins
-    fig_heat.update_traces(
-        xbins=dict(
-            start=0,
-            end=24,
-            size=3  # 24 hours / 8 bins = size of 3
-        ),
-        autobinx=False
-    )
+    fig_heat.update_layout(
+    coloraxis_colorbar=dict(
+        title="Number of Crashes"
+        )
+    )   
     st.plotly_chart(fig_heat, use_container_width=True)
 
-    #Average cost by speed bin
-    df_avg_cost_hour= df.groupby("HOUR")["Estimated Total Comprehensive Cost"].mean().reset_index()
-    fig_avg_cost_hour= px.bar(df_avg_cost_hour, x="HOUR", y="Estimated Total Comprehensive Cost", title= "Average Estimated Cost by Hour", text_auto=".2s")
-    fig_avg_cost_hour.update_layout(yaxis_tickprefix='$')
-    fig_avg_cost_hour.update_xaxes(
-        tickvals=[0, 3, 6, 9, 12, 15, 18, 21],
-        ticktext=["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
-    )
-    fig_avg_cost_hour.update_traces(marker_color='#5236ab')
-    st.plotly_chart(fig_avg_cost_hour)
+    #Crash Severity vs. Average Estimated Costs
+    df_avg_cost = df.groupby(["hour_label"], observed=False)["Estimated Total Comprehensive Cost"].mean().reset_index()
+    df_severity = df.groupby(["hour_label", "Severity_Label"], observed=False).size().reset_index(name="Accident_Count")
 
-    #Severity Breakdown by Hour
-    severity_color_map = {
-        'Fatal': '#991f3d',
-        'Serious Injury': '#e31937',
-        'Minor Injury': '#ff6a00',
-        'Possible Injury': '#f1a425',
-        'No Injury': '#128354',
-        'Unknown': '#cccccc'
-        }
-    df_hour_severity= df.groupby(["HOUR", "Severity_Label"]).size().reset_index(name="Accident_Count")
-    fig_bar = px.bar(
-        df_hour_severity,
-        x="HOUR",
-        y="Accident_Count",
-        color="Severity_Label",
-        title="Number of Crashes by Hour and Severity",
-        labels={"Accident_Count": "Number of Crashes", "Severity_Label": "Severity Label"},
-        barmode="stack",
-        category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
-        color_discrete_map= severity_color_map
-    )
-    fig_bar.update_xaxes(
-        tickvals=[0, 3, 6, 9, 12, 15, 18, 21],
-        ticktext=["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
 
+    #Add the Stacked Bars (Primary Y-Axis)
+    severity_order = ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]
+
+    for severity in severity_order:
+        mask = df_severity["Severity_Label"] == severity
+        fig.add_trace(
+            go.Bar(
+                x=df_severity[mask]["hour_label"],
+                y=df_severity[mask]["Accident_Count"],
+                name=severity,
+                marker_color=severity_color_map.get(severity, '#cccccc'),
+                hovertemplate=f"<b>{severity}</b>: %{{y}} crashes<extra></extra>"
+            ),
+            secondary_y=False,
+        )
+
+    #Add the Average Cost Line (Secondary Y-Axis)
+    fig.add_trace(
+        go.Scatter(
+            x=df_avg_cost["hour_label"],
+            y=df_avg_cost["Estimated Total Comprehensive Cost"],
+            name="Avg Cost ($)",
+            mode='lines+markers',
+            line=dict(color='#5236ab', width=4),
+            marker=dict(size=8),
+            hovertemplate="<b>Avg Cost:</b> $%{y:,.2f}<extra></extra>"
+        ),
+        secondary_y=True,
+    )
+
+    fig.update_layout(
+        title_text="Crash Severity vs. Average Estimated Cost",
+        barmode='stack',
+        hovermode="x unified", # Shows both cost and count in one tooltip
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        height=600
+    )
+
+    # Set y-axis titles
+    fig.update_yaxes(title_text="Number of Crashes", secondary_y=False)
+    fig.update_yaxes(title_text="Average Estimated Cost ($)", secondary_y=True, tickprefix="$")
+
+    st.plotly_chart(fig, use_container_width=True)
 
 with tab5:
     st.subheader(f"📊 Economic Impact by Transportation Type: {current_focus}")
