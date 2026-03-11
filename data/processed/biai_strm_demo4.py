@@ -713,7 +713,7 @@ with tab4:
             **💡High-Level Insights:**
             - Most crashes occur during Monday-Friday from 3 PM - 6 PM.
             - The most expensive crashes occur at 6 AM and 8 PM.
-            - The most severe crashes (those with serious or fatal injuries) occur between ---
+            - The most severe crashes (those with serious or fatal injuries) occur from 3 PM-5 PM.
             
             *Recommendation: Deploying additional resources during afternoon rush hour. Targeting solutions for pedestrian related accidents from 6 PM - 9 PM and solutions for speed-related accidents from 5 AM- 7 AM.*
             *See the prescriptive actions tab for specific solutions.*
