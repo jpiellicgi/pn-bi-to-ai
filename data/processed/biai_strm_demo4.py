@@ -445,7 +445,7 @@ k2.metric("Lives Lost", int(df["death_cnt"].sum()))
 k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 
 # --- TABS ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🚶Top Predictors", "🗺️ Geographic Risk", "📊 Incident Risk Profile", "⏰ Temporal Patterns", "💰 Economic Analysis", "🧠 Prescriptive Actions"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🚶Top Predictors", "🗺️ Geographic Risk", "📊 Speed and Severity", "⏰ Temporal Patterns", "💰 Transportation Mode Analysis", "🧠 Prescriptive Actions"])
 
 with tab1:
     st.write("##### The top predictors and prescriptive actions were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.")
@@ -460,7 +460,7 @@ with tab1:
 
         st.write("**Estimated Total Comprehensive Cost per Year**")
         df_total_cost= df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
-        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", text_auto=".2s")
+        fig_cost_bar= px.bar(df_total_cost, x="Year", y="Estimated Total Comprehensive Cost", text_auto=True)
         fig_cost_bar.update_layout(
             height=400, 
             width=800,
@@ -708,19 +708,8 @@ with tab3:
 
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
+    #Density Heatmap for Number of Crashes for Day of Week and Time Frame
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
-    def get_range_label(h):
-        start = (h // 3) * 3
-        end = start + 3
-        def fmt(hr):
-            hr = hr % 24
-            if hr == 0: return "12 AM"
-            if hr < 12: return f"{hr} AM"
-            if hr == 12: return "12 PM"
-            return f"{hr-12} PM"
-        return f"{fmt(start)} - {fmt(end)}"
-    
-    heat_df["Time_Range"] = heat_df["HOUR"].apply(get_range_label)
     fig_heat = px.density_heatmap(
         heat_df,
         x="HOUR",
@@ -734,7 +723,6 @@ with tab4:
     fig_heat.update_traces(
         xbins=dict(start=0, end=24, size=3),
         autobinx=False,
-        customdata=heat_df[["Time_Range"]],
         hovertemplate=(
         "<b>Number of Crashes:</b> %{z}<extra></extra>"
         )
@@ -758,13 +746,10 @@ with tab4:
     #Crash Severity vs. Average Estimated Costs
     df_avg_cost = df.groupby(["hour_label"], observed=False)["Estimated Total Comprehensive Cost"].mean().reset_index()
     df_severity = df.groupby(["hour_label", "Severity_Label"], observed=False).size().reset_index(name="Accident_Count")
-
     # Create figure with secondary y-axis
     fig = make_subplots(specs=[[{"secondary_y": True}]])
-
     #Add the Stacked Bars (Primary Y-Axis)
     severity_order = ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]
-
     for severity in severity_order:
         mask = df_severity["Severity_Label"] == severity
         fig.add_trace(
@@ -777,7 +762,6 @@ with tab4:
             ),
             secondary_y=False,
         )
-
     #Add the Average Cost Line (Secondary Y-Axis)
     fig.add_trace(
         go.Scatter(
@@ -791,7 +775,6 @@ with tab4:
         ),
         secondary_y=True,
     )
-
     fig.update_layout(
         title_text="Crash Severity vs. Average Estimated Cost",
         barmode='stack',
@@ -799,12 +782,46 @@ with tab4:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         height=600
     )
-
-    # Set y-axis titles
     fig.update_yaxes(title_text="Number of Crashes", secondary_y=False)
     fig.update_yaxes(title_text="Average Estimated Cost ($)", secondary_y=True, tickprefix="$")
-
     st.plotly_chart(fig, use_container_width=True)
+
+
+    #Explanatory Charts for Spikes in Average Cost 
+    st.text("The spikes in the average estimated total cost can be explained by pedestrian-involvement in the crash, higher average speed limits, and outliers in the data. The visuals below show these patterns. The first visual shows which hours have the most crashes with pedestrians involved. The second visual shows the average speed limit by hour. The spike in average cost for crashes at 1 AM is due to outliers in the data. Most accidents that occur between 1 AM and 2 AM fall in the average cost range of $20k - $70k, but there were some exceptionally costly accidents that drove up the average cost.")
+
+    #Number of Crashes Involving Pedestrians by Hour
+    df_pedestrian = df[df['pedestrian_involved'] == True]
+    df_ped_hour = df_pedestrian.groupby("hour_label", observed=False).size().reset_index(name="Pedestrian_Crash_Count")
+    fig_ped = px.bar(
+        df_ped_hour, 
+        x="hour_label", 
+        y="Pedestrian_Crash_Count",
+        title="Pedestrian-Involved Crashes by Hour",
+        labels={"hour_label": "Hour", "Pedestrian_Crash_Count": "Number of Crashes"},
+        text_auto=True # Shows the count number on top of each bar
+    )
+    fig_ped.update_traces(marker_color='#5236ab')
+    st.plotly_chart(fig_ped, use_container_width=True) 
+
+
+    #Average Crash Speed Limit by Hour
+    df_avg_speed = df.groupby("hour_label", observed=False)["crash_speed_limit"].mean().reset_index()
+    fig_speed = px.line(
+        df_avg_speed, 
+        x="hour_label", 
+        y="crash_speed_limit",
+        title="Average Speed Limit of Crashes by Hour",
+        markers=True, # Adds dots to each hour for better readability
+        labels={"hour_label": "Hour of Day", "crash_speed_limit": "Avg Speed Limit (MPH)"},
+        template="plotly_white"
+    )
+    fig_speed.update_traces(
+        line=dict(color='#5236ab', width=3),
+        marker=dict(size=8)
+    )
+    fig_speed.update_yaxes(ticksuffix=" MPH")
+    st.plotly_chart(fig_speed, use_container_width=True)
 
 with tab5:
     st.subheader(f"📊 Economic Impact by Transportation Type: {current_focus}")
