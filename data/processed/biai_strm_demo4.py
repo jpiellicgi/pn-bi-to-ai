@@ -713,7 +713,7 @@ with tab4:
             **💡High-Level Insights:**
             - Most crashes occur during Monday-Friday from 3 PM - 6 PM.
             - The most expensive crashes occur at 6 AM and 8 PM.
-            - The most severe crashes those with serious or fatal injuries) occur between ---
+            - The most severe crashes (those with serious or fatal injuries) occur between ---
             
             *Recommendation: Deploying additional resources during afternoon rush hour. Targeting solutions for pedestrian related accidents from 6 PM - 9 PM and solutions for speed-related accidents from 5 AM- 7 AM.*
             *See the prescriptive actions tab for specific solutions.*
@@ -802,6 +802,7 @@ with tab4:
     #Explanatory Charts for Spikes in Average Cost 
     st.text("The spikes in the average estimated total cost can be explained by pedestrian-involvement in the crash, higher average speed limits, and outliers in the data. The visuals below show these patterns. The first visual shows which hours have the most crashes with pedestrians involved. The second visual shows the average speed limit by hour. The spike in average cost for crashes at 1 AM is due to outliers in the data. Most crashes that occur between 1 AM and 2 AM fall in the average cost range of $20k - $70k, but there were some exceptionally costly crashes that drove up the average cost.")
 
+    st.write("##### Explanatory Visuals for Spikes in Average Cost")
     #Number of Crashes Involving Pedestrians by Hour
     df_pedestrian = df[df['pedestrian_involved'] == True]
     df_ped_hour = df_pedestrian.groupby("hour_label", observed=False).size().reset_index(name="Pedestrian_Crash_Count")
