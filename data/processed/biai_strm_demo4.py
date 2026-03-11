@@ -708,8 +708,8 @@ with tab3:
 
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
-    st.info("The visuals on this page shows the number of crashes that occurred during different timeframes as well the average estimated cost and the severity of those crashes.")
-    st.write("""
+    st.write("""The visuals on this page shows the number of crashes that occurred during different timeframes as well the average estimated cost and the severity of those crashes.""")
+    st.info("""
             **💡High-Level Insights:**
             - Most crashes occur during Monday-Friday from 3 PM - 6 PM.
             - The most expensive crashes occur at 6 AM and 8 PM.
@@ -718,7 +718,6 @@ with tab4:
             *Recommendation: Deploying additional resources during afternoon rush hour. Targeting solutions for pedestrian related accidents from 6 PM - 9 PM and solutions for speed-related accidents from 5 AM- 7 AM.*
             *See the prescriptive actions tab for specific solutions.*
         """)
-    
 
     #Density Heatmap for Number of Crashes for Day of Week and Time Frame
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
