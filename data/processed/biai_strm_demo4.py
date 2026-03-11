@@ -708,6 +708,18 @@ with tab3:
 
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
+    st.info("The visuals on this page shows the number of crashes that occurred during different timeframes as well the average estimated cost and the severity of those crashes.")
+    st.write("""
+            **💡High-Level Insights:**
+            - Most crashes occur during Monday-Friday from 3 PM - 6 PM.
+            - The most expensive crashes occur at 6 AM and 8 PM.
+            - The most severe crashes those with serious or fatal injuries) occur between ---
+            
+            *Recommendation: Deploying additional resources during afternoon rush hour. Targeting solutions for pedestrian related accidents from 6 PM - 9 PM and solutions for speed-related accidents from 5 AM- 7 AM.*
+            *See the prescriptive actions tab for specific solutions.*
+        """)
+    
+
     #Density Heatmap for Number of Crashes for Day of Week and Time Frame
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
     fig_heat = px.density_heatmap(
@@ -742,6 +754,7 @@ with tab4:
         )
     )   
     st.plotly_chart(fig_heat, use_container_width=True)
+    st.text("The visual above shows the number of crashes each day of the week in 3 hour timeframes. The darker the shade of purple, the more crashes that occurred during that timeframe.")
 
     #Crash Severity vs. Average Estimated Costs
     df_avg_cost = df.groupby(["hour_label"], observed=False)["Estimated Total Comprehensive Cost"].mean().reset_index()
@@ -788,7 +801,7 @@ with tab4:
 
 
     #Explanatory Charts for Spikes in Average Cost 
-    st.text("The spikes in the average estimated total cost can be explained by pedestrian-involvement in the crash, higher average speed limits, and outliers in the data. The visuals below show these patterns. The first visual shows which hours have the most crashes with pedestrians involved. The second visual shows the average speed limit by hour. The spike in average cost for crashes at 1 AM is due to outliers in the data. Most accidents that occur between 1 AM and 2 AM fall in the average cost range of $20k - $70k, but there were some exceptionally costly accidents that drove up the average cost.")
+    st.text("The spikes in the average estimated total cost can be explained by pedestrian-involvement in the crash, higher average speed limits, and outliers in the data. The visuals below show these patterns. The first visual shows which hours have the most crashes with pedestrians involved. The second visual shows the average speed limit by hour. The spike in average cost for crashes at 1 AM is due to outliers in the data. Most crashes that occur between 1 AM and 2 AM fall in the average cost range of $20k - $70k, but there were some exceptionally costly crashes that drove up the average cost.")
 
     #Number of Crashes Involving Pedestrians by Hour
     df_pedestrian = df[df['pedestrian_involved'] == True]
