@@ -249,6 +249,18 @@ def build_map(df, top_n=50):
 
     # ---- FULL LEGEND FIX — build figure manually ----
     fig = go.Figure()
+    # 1) Dummy legend traces (ensures legend shows ALL actions)
+    for action_label, color in label_to_color.items():
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=[],
+                lon=[],
+                mode="markers",
+                marker=dict(size=10, color=color, opacity=1),
+                name=action_label,
+                showlegend=True
+            )
+        )
 
     # 2) Real plotted points (one trace per action)
     for action_label in label_order:
