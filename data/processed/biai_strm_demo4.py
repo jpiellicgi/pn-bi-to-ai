@@ -250,19 +250,6 @@ def build_map(df, top_n=50):
     # ---- FULL LEGEND FIX — build figure manually ----
     fig = go.Figure()
 
-    # 1) Dummy legend traces (legend ALWAYS shows all actions)
-    for action_label, color in label_to_color.items():
-        fig.add_trace(
-            go.Scattermapbox(
-                lat=[],
-                lon=[],
-                mode="markers",
-                marker=dict(size=10, color=color),
-                name=action_label,
-                showlegend=True
-            )
-        )
-
     # 2) Real plotted points (one trace per action)
     for action_label in label_order:
         subset = df_map[df_map["best_action_label"] == action_label]
@@ -314,7 +301,17 @@ def build_map(df, top_n=50):
         mapbox_style="open-street-map",
         mapbox=dict(center=dict(lat=center_lat, lon=center_lon), zoom=10),
         margin=dict(l=0, r=0, t=0, b=0),
+    
         legend_title_text="Recommended action",
+        legend=dict(
+            itemsizing="constant",
+            traceorder="normal",  
+            bgcolor="rgba(255,255,255,0.7)",
+            bordercolor="rgba(0,0,0,0.2)",
+            borderwidth=1
+        ),
+    
+        showlegend=True   # <-- IMPORTANT
     )
 
     st.plotly_chart(fig, use_container_width=True)
