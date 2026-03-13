@@ -368,17 +368,17 @@ def ranked_table_and_details(df, top_n):
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
     with left:
         st.subheader(f"Top {top_n} locations by expected reduction")
-        # show_columns = ["Address", "location_id", "best_action", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]
-        # ranked_display = ranked[show_columns].rename(columns={"address": "Address","pct_reduction_norm": "pct_reduction","ai_rationale_short": "ai_rationale (short)",})
+        # show_columns = ["Address", "location_id", "best_action_label", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]
         show_columns = [
             "Address", "location_id", "best_action_label", "expected_reduction_amount",
             "pct_reduction_norm", "pred_est_ttl_comp_cost", "expected_cost_after_action", "ai_rationale_short"
         ]
-        ranked_display = ranked[show_columns].rename(columns={
-            "best_action_label": "best_action",
-            "pct_reduction_norm": "pct_reduction",
-            "ai_rationale_short": "ai_rationale (short)",
-        })
+        ranked_display = ranked[show_columns].rename(columns={"address": "Address","pct_reduction_norm": "% reduction","ai_rationale_short": "Rationale", "expected_cost_after_action":"Cost after action","pred_est_ttl_comp_cost":"Crash cost est.","expected_reduction_amount":"Expected reduction","best_action_label":"Recommended action","location_id":"Location",})
+        # ranked_display = ranked[show_columns].rename(columns={
+        #     "best_action_label": "best_action",
+        #     "pct_reduction_norm": "pct_reduction",
+        #     "ai_rationale_short": "ai_rationale (short)",
+        # })
         ranked_display["expected_reduction_amount"] = ranked_display["expected_reduction_amount"].map(fmt_dollars)
         ranked_display["expected_cost_after_action"] = ranked_display["expected_cost_after_action"].map(fmt_dollars)
         ranked_display["pred_est_ttl_comp_cost"] = ranked_display["pred_est_ttl_comp_cost"].map(fmt_dollars)
