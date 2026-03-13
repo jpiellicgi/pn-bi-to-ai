@@ -201,7 +201,8 @@ def prepare_prescriptive_df(df_prescriptive):
     return df
     return df
 
-def build_map(df, top_n=50, all_actions=None):
+# def build_map(df, top_n=50, all_actions=None):
+def build_map(df, top_n=50):
     # Ensure display label column exists
     if "best_action_label" not in df.columns:
         df = df.copy()
@@ -214,17 +215,28 @@ def build_map(df, top_n=50, all_actions=None):
     st.write("DEBUG: df_map rows", df_map.reset_index(drop=True)[["latitude", "longitude", "address_short", "best_action_label"]])
 
     # Legend/category order
-    if all_actions is None:
-        all_actions = list(df_map["best_action"].dropna().unique())
-    # Build label order in the same order as actions, but de-duplicated and aligned
+    # if all_actions is None:
+    #     all_actions = list(df_map["best_action"].dropna().unique())
+    # # Build label order in the same order as actions, but de-duplicated and aligned
+    # pairs = (
+    #     df_map[["best_action", "best_action_label"]]
+    #     .dropna()
+    #     .drop_duplicates()
+    # )
+    # # Preserve the original actions order but map to their labels
+    # label_order = [pairs.loc[pairs["best_action"] == a, "best_action_label"].iloc[0] 
+    #                for a in all_actions if a in pairs["best_action"].values]
+    # --- FIX: Build category order ONLY from df_map, in exact df_map order ---
     pairs = (
-        df_map[["best_action", "best_action_label"]]
+        df_map[["best_action_label"]]
         .dropna()
         .drop_duplicates()
     )
-    # Preserve the original actions order but map to their labels
-    label_order = [pairs.loc[pairs["best_action"] == a, "best_action_label"].iloc[0] 
-                   for a in all_actions if a in pairs["best_action"].values]
+    label_order = pairs["best_action_label"].tolist()
+
+# Critical: this list MUST contain every category, in the exact order it appears in df_map
+label_order = pairs["best_action_label"].tolist()
+``
 
     # Color mapping (fallback to gray if missing)
     ACTION_COLORS_RGB = {
@@ -1062,7 +1074,8 @@ with tab6:
             # end top layout
     
         selected_action_labels = [pretty_action(a) for a in st.session_state.get("presc_actions", all_actions)]
-        build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=st.session_state.get("presc_actions", all_actions))
+        # build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=st.session_state.get("presc_actions", all_actions))
+        build_map(dfp_f, top_n=st.session_state["presc_topn"])
         # build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
         action_bars(dfp_f, top_n=st.session_state["presc_topn"])
         ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
