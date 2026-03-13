@@ -552,15 +552,40 @@ def clean_rationale(text: str) -> str:
             )
             continue
 
-        # fallback: light cleaning
+        if s.lower().startswith("work zone flag indicates"):
+            cleaned.append(
+                "Work zone indicators suggest temporary controls such as signage, barriers, or speed management would be appropriate."
+            )
+            continue
+
+        if s.lower().startswith("work zone context detected"):
+            cleaned.append(
+                "Work zone activity has been identified at this location."
+            )
+            continue
+
+        if s.lower().startswith("fatality flag increases priority"):
+            cleaned.append(
+                "A recent fatality increases the priority for stronger interventions at this location."
+            )
+            continue
+
+        # fallback: lightly cleaned sentence with period added later
         cleaned.append(s)
 
-    # Combine into a single normal paragraph
-    final_text = " ".join(cleaned)
-    final_text = re.sub(r"\s+", " ", final_text).strip()
+    # Add periods back cleanly
+    cleaned_with_periods = []
+    for s in cleaned:
+        s = s.strip()
+        if not s.endswith("."):
+            s = s + "."
+        cleaned_with_periods.append(s)
 
-    return final_text
+    # Join into natural paragraph
+    final_text = " ".join(cleaned_with_periods)
+    final_text = re.sub(r"\s+", " ", final_text)
 
+    return final_text.strip()
 def ranked_table_and_details(df, top_n):
     left, right = st.columns([1.35, 1])
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
@@ -599,17 +624,9 @@ def ranked_table_and_details(df, top_n):
                 **Expected cost after action:** {fmt_dollars(row['expected_cost_after_action'])}  
                 """
             )
-            # st.markdown("**Rationale:**")
-            # cleaned = clean_rationale(str(row.get("ai_rationale", "")))
-            # st.write(cleaned)
             st.markdown("**Rationale:**")
-
-            raw_text = str(row.get("ai_rationale", ""))
-            
-            cleaned = clean_rationale(raw_text)
-            
-            st.write("RAW:", raw_text)
-            st.write("CLEANED:", cleaned)
+            cleaned = clean_rationale(str(row.get("ai_rationale", "")))
+            st.write(cleaned)
 
 # ----------------------------
 # Execution & UI
