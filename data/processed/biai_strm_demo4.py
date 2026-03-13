@@ -232,20 +232,20 @@ def build_map(df, top_n=50):
         "work_zone_controls": (230, 126, 34),
         "micromobility_zone_controls": (82, 54, 171)
     }
-    # FULL list of actions (all possible, even if not present in df_map)
-    full_actions = list(ACTION_COLORS.keys())
-    
-    # Convert internal keys → pretty labels
-    full_action_labels = [pretty_action(a) for a in full_actions]
 
     def _rgb_to_plotly(rgb_tuple):
         r, g, b = rgb_tuple
         return f"rgb({r},{g},{b})"
 
+    # MUST be defined BEFORE full_actions
     ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
     DEFAULT_COLOR = "rgb(120,120,120)"
 
-    # Map internal keys → pretty labels → colors
+    # ---- FULL list of ALL actions (even if not in df_map) ----
+    full_actions = list(ACTION_COLORS.keys())
+    full_action_labels = [pretty_action(a) for a in full_actions]
+
+    # ---- Map pretty label → color for ALL actions ----
     label_to_color = {
         pretty_action(a): ACTION_COLORS.get(a, DEFAULT_COLOR)
         for a in full_actions
@@ -256,13 +256,12 @@ def build_map(df, top_n=50):
     # 1) Dummy legend traces (ensures legend shows ALL actions)
     
     for action_label in full_action_labels:
-        color = label_to_color[action_label]
         fig.add_trace(
             go.Scattermapbox(
                 lat=[None],
                 lon=[None],
                 mode="markers",
-                marker=dict(size=10, color=color, opacity=1),
+                marker=dict(size=10, color=label_to_color[action_label]),
                 name=action_label,
                 showlegend=True
             )
