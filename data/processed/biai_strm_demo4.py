@@ -492,6 +492,16 @@ def build_map(df, top_n=50):
 #     c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="total_reduction:Q"), use_container_width=True)
 #     c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="locations:Q"), use_container_width=True)
 def action_bars(df, top_n=50):
+    
+    full_actions = [
+        "reduce_speed_limit",
+        "increase_enforcement",
+        "improve_crosswalks",
+        "add_speed_bumps",
+        "work_zone_controls",
+        "micromobility_zone_controls"
+    ]
+    full_action_labels = [pretty_action(a) for a in full_actions]
     # Ensure label column exists
     if "best_action_label" not in df.columns:
         df = df.copy()
@@ -505,12 +515,14 @@ def action_bars(df, top_n=50):
         .agg(total_reduction=("expected_reduction_amount", "sum"),
              locations=("location_id", "count"))
         .reset_index()
-    )
+    )  
+    agg = agg.set_index("best_action_label").reindex(full_action_labels, fill_value=0).reset_index()
+    agg = agg.rename(columns={"best_action_label": "Recommended action"})
 
     c1, c2 = st.columns(2)
     c1.altair_chart(
         alt.Chart(agg).mark_bar(color="#5236ab").encode(
-            x=alt.X("best_action_label:N", sort='-y', title="Recommended action"),
+            x=alt.X("Recommended action:N", sort='-y', title="Recommended action"),
             y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"),
             tooltip=[
                 alt.Tooltip("best_action_label:N", title="Recommended action"),
