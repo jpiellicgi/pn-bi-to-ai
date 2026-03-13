@@ -230,7 +230,7 @@ def build_map(df, top_n=50, all_actions=None):
         "improve_crosswalks": (142, 84, 255),
         "add_speed_bumps": (215, 45, 125),
         "work_zone_controls": (230, 126, 34),
-        "micormobility_zone_controls": (82,54, 171)
+        "micromobility_zone_controls": (82,54, 171)
     }
     def _rgb_to_plotly(rgb_tuple):
         r, g, b = rgb_tuple
