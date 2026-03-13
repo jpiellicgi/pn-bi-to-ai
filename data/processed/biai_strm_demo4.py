@@ -262,6 +262,18 @@ def build_map(df, top_n=50):
         center=dict(lat=center_lat, lon=center_lon),
         height=550,
     )
+    # ---- Add dummy traces so ALL actions appear in legend ----
+    for action_label, color in label_to_color.items():
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=[],
+                lon=[],
+                mode="markers",
+                marker=dict(size=10, color=color, opacity=0),
+                name=action_label,
+                showlegend=True
+            )
+        )
 
     # ---- Tooltip data (aligned exactly with df_map rows) ----
     customdata = np.stack([
