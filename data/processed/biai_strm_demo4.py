@@ -209,6 +209,9 @@ def build_map(df, top_n=50, all_actions=None):
 
     # Sort and take top N
     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+    
+    # DEBUG 1: What the map is actually plotting (and in what order)
+    st.write("DEBUG: df_map rows", df_map.reset_index(drop=True)[["latitude", "longitude", "address_short", "best_action_label"]]
 
     # Legend/category order
     if all_actions is None:
@@ -269,6 +272,9 @@ def build_map(df, top_n=50, all_actions=None):
         df_map["pct_reduction_norm"].astype(float),
         df_map["address_short"].astype(str)
     ], axis=-1)
+
+    # DEBUG 2: What your tooltip data looks like in row order
+    st.write("DEBUG: tooltip customdata", pd.DataFrame(customdata, columns=["action", "loss", "reduction", "pct", "address"]))
     
     fig.update_traces(
         customdata=customdata,
