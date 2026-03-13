@@ -282,7 +282,32 @@ def build_map(df, top_n=50):
             "Address: %{customdata[4]}<extra></extra>",
         marker=dict(size=10, opacity=0.9)
     )
+    # ---- FIX: Assign customdata PER TRACE (the only reliable method) ----
 
+    for trace in fig.data:
+        # The name of the trace is the best_action_label
+        action_label = trace.name
+    
+        # Filter df_map rows for this trace/category
+        mask = (df_map["best_action_label"] == action_label)
+    
+        trace_customdata = np.stack([
+            df_map.loc[mask, "best_action_label"].astype(str),
+            df_map.loc[mask, "pred_est_ttl_comp_cost"].astype(float),
+            df_map.loc[mask, "expected_reduction_amount"].astype(float),
+            df_map.loc[mask, "pct_reduction_norm"].astype(float),
+            df_map.loc[mask, "address_short"].astype(str),
+        ], axis=-1)
+    
+        trace.customdata = trace_customdata
+    
+        trace.hovertemplate = (
+            "<b>%{customdata[0]}</b><br>" +
+            "Estimated loss: %{customdata[1]:$,.0f}<br>" +
+            "Expected reduction: %{customdata[2]:$,.0f}<br>" +
+            "Percent reduction: %{customdata[3]:.1%}<br>" +
+            "Address: %{customdata[4]}<extra></extra>"
+        )
     # Layout
     fig.update_layout(
         mapbox_style="open-street-map",
