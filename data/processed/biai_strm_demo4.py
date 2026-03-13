@@ -379,9 +379,9 @@ def ranked_table_and_details(df, top_n):
         #     "pct_reduction_norm": "pct_reduction",
         #     "ai_rationale_short": "ai_rationale (short)",
         # })
-        ranked_display["expected_reduction_amount"] = ranked_display["expected_reduction_amount"].map(fmt_dollars)
-        ranked_display["expected_cost_after_action"] = ranked_display["expected_cost_after_action"].map(fmt_dollars)
-        ranked_display["pred_est_ttl_comp_cost"] = ranked_display["pred_est_ttl_comp_cost"].map(fmt_dollars)
+        ranked_display["Expected reduction"] = ranked_display["Expected reduction"].map(fmt_dollars)
+        ranked_display["Cost after action"] = ranked_display["Cost after action"].map(fmt_dollars)
+        ranked_display["Crash cost est."] = ranked_display["Crash cost est."].map(fmt_dollars)
         st.dataframe(ranked_display, use_container_width=True, hide_index=True)
         
     with right:
