@@ -1032,7 +1032,7 @@ with tab6:
             locations_display = f"{len(df_topn):,}"
            
             with st.container():
-                st.metric("Total Expected Reduction", f"{total_reduction:,.0f}")
+                st.metric("Total Expected Reduction", f"${total_reduction:,.0f}")
                 st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
             
                 st.metric("Median % Reduction", median_pct_display)
