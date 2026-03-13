@@ -232,10 +232,6 @@ def build_map(df, top_n=50, all_actions=None):
         "work_zone_controls": (230, 126, 34),
         "micormobility_zone_controls": (82,54, 171)
     }
-    # "reduce_speed_limit": (227, 25, 55),
-    #     "increase_enforcement": (82, 54, 171),
-    #     "improve_crosswalks": (110, 63, 237),
-    #     "add_speed_bumps": (168, 36, 101)
     def _rgb_to_plotly(rgb_tuple):
         r, g, b = rgb_tuple
         return f"rgb({r},{g},{b})"
@@ -399,7 +395,8 @@ def ranked_table_and_details(df, top_n):
             st.markdown(
                 f"""
                 **Action:** {row.get('best_action_label', pretty_action(row.get('best_action', '')))}
-                **Risk score:** `{fmt_dollars(row['pred_est_ttl_comp_cost'])}`   
+                
+                **Crash cost estimate:** `{fmt_dollars(row['pred_est_ttl_comp_cost'])}`   
                 **Expected reduction:** `{fmt_dollars(row['expected_reduction_amount'])}`  
                 **% reduction:** {row['pct_reduction_norm'] * 100:.1f}%  
                 **Expected cost after action:** {fmt_dollars(row['expected_cost_after_action'])}  
