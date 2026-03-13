@@ -200,6 +200,7 @@ def prepare_prescriptive_df(df_prescriptive):
     df["best_action_label"] = df["best_action"].apply(pretty_action)
     return df
     return df
+
 def build_map(df, top_n=50):
     # Ensure display label column exists
     if "best_action_label" not in df.columns:
@@ -214,8 +215,7 @@ def build_map(df, top_n=50):
           .reset_index(drop=True)
     )
 
-    # ---- FIX: build category order ONLY from df_map actions ----
-    # This prevents Plotly from reordering the data internally (which causes tooltip mismatch)
+    # ---- FIX: category order based only on df_map actions ----
     pairs = (
         df_map[["best_action", "best_action_label"]]
         .dropna()
@@ -240,69 +240,55 @@ def build_map(df, top_n=50):
     ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
     DEFAULT_COLOR = "rgb(120,120,120)"
 
-    # Map pretty labels → correct Plotly colors
+    # Map internal keys → pretty labels → colors
     label_to_color = {}
     for _, row in pairs.iterrows():
-        orig = row["best_action"]                  # internal key
-        lbl = row["best_action_label"]             # pretty legend label
+        orig = row["best_action"]
+        lbl = row["best_action_label"]
         label_to_color[lbl] = ACTION_COLORS.get(orig, DEFAULT_COLOR)
 
-    # ---- Create the map ----
-    center_lat = df_map["latitude"].mean()
-    center_lon = df_map["longitude"].mean()
+    # ---- FULL LEGEND FIX — build figure manually ----
+    fig = go.Figure()
 
-    fig = px.scatter_mapbox(
-        df_map,
-        lat="latitude",
-        lon="longitude",
-        color="best_action_label",
-        color_discrete_map=label_to_color,
-        category_orders={"best_action_label": label_order},
-        zoom=10,
-        center=dict(lat=center_lat, lon=center_lon),
-        height=550,
-    )
-    # ---- Add dummy traces so ALL actions appear in legend ----
+    # 1) Dummy legend traces (legend ALWAYS shows all actions)
     for action_label, color in label_to_color.items():
         fig.add_trace(
             go.Scattermapbox(
                 lat=[],
                 lon=[],
                 mode="markers",
-                marker=dict(size=10, color=color, opacity=0),
+                marker=dict(size=10, color=color),
                 name=action_label,
                 showlegend=True
             )
         )
 
-    # ---- Tooltip data (aligned exactly with df_map rows) ----
-    customdata = np.stack([
-        df_map["best_action_label"].astype(str),
-        df_map["pred_est_ttl_comp_cost"].astype(float),
-        df_map["expected_reduction_amount"].astype(float),
-        df_map["pct_reduction_norm"].astype(float),
-        df_map["address_short"].astype(str)
-    ], axis=-1)
+    # 2) Real plotted points (one trace per action)
+    for action_label in label_order:
+        subset = df_map[df_map["best_action_label"] == action_label]
 
-    fig.update_traces(
-        customdata=customdata,
-        hovertemplate=
-            "<b>%{customdata[0]}</b><br>" +
-            "Estimated loss: %{customdata[1]:$,.0f}<br>" +
-            "Expected reduction: %{customdata[2]:$,.0f}<br>" +
-            "Percent reduction: %{customdata[3]:.1%}<br>" +
-            "Address: %{customdata[4]}<extra></extra>",
-        marker=dict(size=10, opacity=0.9)
-    )
-    # ---- FIX: Assign customdata PER TRACE (the only reliable method) ----
+        fig.add_trace(
+            go.Scattermapbox(
+                lat=subset["latitude"],
+                lon=subset["longitude"],
+                mode="markers",
+                marker=dict(size=10, color=label_to_color[action_label], opacity=0.9),
+                name=action_label,
+                showlegend=False   # legend handled by dummy traces
+            )
+        )
 
-    for trace in fig.data:
-        # The name of the trace is the best_action_label
+    # ---- Tooltip data PER REAL TRACE ----
+    # IMPORTANT: skip dummy traces (first len(label_to_color) traces)
+    dummy_count = len(label_to_color)
+
+    for i, trace in enumerate(fig.data):
+        if i < dummy_count:
+            continue  # skip dummy legend traces
+
         action_label = trace.name
-    
-        # Filter df_map rows for this trace/category
-        mask = (df_map["best_action_label"] == action_label)
-    
+        mask = df_map["best_action_label"] == action_label
+
         trace_customdata = np.stack([
             df_map.loc[mask, "best_action_label"].astype(str),
             df_map.loc[mask, "pred_est_ttl_comp_cost"].astype(float),
@@ -310,9 +296,8 @@ def build_map(df, top_n=50):
             df_map.loc[mask, "pct_reduction_norm"].astype(float),
             df_map.loc[mask, "address_short"].astype(str),
         ], axis=-1)
-    
+
         trace.customdata = trace_customdata
-    
         trace.hovertemplate = (
             "<b>%{customdata[0]}</b><br>" +
             "Estimated loss: %{customdata[1]:$,.0f}<br>" +
@@ -320,9 +305,14 @@ def build_map(df, top_n=50):
             "Percent reduction: %{customdata[3]:.1%}<br>" +
             "Address: %{customdata[4]}<extra></extra>"
         )
+
     # Layout
+    center_lat = df_map["latitude"].mean()
+    center_lon = df_map["longitude"].mean()
+
     fig.update_layout(
         mapbox_style="open-street-map",
+        mapbox=dict(center=dict(lat=center_lat, lon=center_lon), zoom=10),
         margin=dict(l=0, r=0, t=0, b=0),
         legend_title_text="Recommended action",
     )
