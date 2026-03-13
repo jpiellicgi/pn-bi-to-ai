@@ -394,8 +394,7 @@ def ranked_table_and_details(df, top_n):
             row = df.loc[df["location_id"] == selected_loc].iloc[0]
             st.markdown(
                 f"""
-                **Action:** {row.get('best_action_label', pretty_action(row.get('best_action', '')))}
-                
+                **Action:** {row.get('best_action_label', pretty_action(row.get('best_action', '')))}  
                 **Crash cost estimate:** `{fmt_dollars(row['pred_est_ttl_comp_cost'])}`   
                 **Expected reduction:** `{fmt_dollars(row['expected_reduction_amount'])}`  
                 **% reduction:** {row['pct_reduction_norm'] * 100:.1f}%  
