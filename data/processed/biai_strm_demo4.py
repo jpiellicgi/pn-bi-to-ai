@@ -225,11 +225,17 @@ def build_map(df, top_n=50, all_actions=None):
 
     # Color mapping (fallback to gray if missing)
     ACTION_COLORS_RGB = {
-        "reduce_speed_limit": (227, 25, 55),
-        "increase_enforcement": (82, 54, 171),
-        "improve_crosswalks": (110, 63, 237),
-        "add_speed_bumps": (168, 36, 101)
+        "reduce_speed_limit": (195, 10, 50),
+        "increase_enforcement": (40, 90, 180),
+        "improve_crosswalks": (142, 84, 255),
+        "add_speed_bumps": (215, 45, 125),
+        "work_zone_controls: (227, 25, 55),
+        "micormobility_zone_controls": (82,54, 171)
     }
+    # "reduce_speed_limit": (227, 25, 55),
+    #     "increase_enforcement": (82, 54, 171),
+    #     "improve_crosswalks": (110, 63, 237),
+    #     "add_speed_bumps": (168, 36, 101)
     def _rgb_to_plotly(rgb_tuple):
         r, g, b = rgb_tuple
         return f"rgb({r},{g},{b})"
