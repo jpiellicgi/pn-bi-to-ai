@@ -232,6 +232,11 @@ def build_map(df, top_n=50):
         "work_zone_controls": (230, 126, 34),
         "micromobility_zone_controls": (82, 54, 171)
     }
+    # FULL list of actions (all possible, even if not present in df_map)
+    full_actions = list(ACTION_COLORS.keys())
+    
+    # Convert internal keys → pretty labels
+    full_action_labels = [pretty_action(a) for a in full_actions]
 
     def _rgb_to_plotly(rgb_tuple):
         r, g, b = rgb_tuple
@@ -245,12 +250,14 @@ def build_map(df, top_n=50):
     for _, row in pairs.iterrows():
         orig = row["best_action"]
         lbl = row["best_action_label"]
-        label_to_color[lbl] = ACTION_COLORS.get(orig, DEFAULT_COLOR)
+        label_to_color[lbl] = ACTION_COLORS.get(orig, DEFAULT_COLOR))
 
     # ---- FULL LEGEND FIX — build figure manually ----
     fig = go.Figure()
     # 1) Dummy legend traces (ensures legend shows ALL actions)
-    for action_label, color in label_to_color.items():
+    
+    for action_label in full_action_labels:
+        color = label_to_color[action_label]
         fig.add_trace(
             go.Scattermapbox(
                 lat=[None],
