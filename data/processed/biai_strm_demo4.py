@@ -86,8 +86,13 @@ def load_partner_data(url: str) -> pd.DataFrame:
     sev_map = {1:"Fatal",2:"Serious Injury",3:"Minor Injury",4:"Possible Injury",0:"No Injury",5:"Unknown"}
     df["Severity_Label"] = df["crash_sev_id"].map(sev_map)
 
-    for c in ["tot_injry_cnt","crash_speed_limit","Estimated Total Comprehensive Cost"]:
-        df[c] = pd.to_numeric(df.get(c, 0), errors="coerce").fillna(0)
+    # FIX APPLIED HERE
+    numeric_cols = ["tot_injry_cnt","crash_speed_limit","Estimated Total Comprehensive Cost"]
+    for c in numeric_cols:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+        else:
+            df[c] = 0
 
     mode_map = {
         "Passenger Car": ["passenger car_involved","passenger_car_involved","car_fl","is_car"],
@@ -477,7 +482,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 ])
 
 # ----------------------------
-# Tab 1 — Top Predictors
+# Tab 1
 # ----------------------------
 with tab1:
     st.write(
@@ -519,7 +524,7 @@ with tab1:
         st.plotly_chart(fig_cnt)
 
 # ----------------------------
-# Tab 2 — Geographic Risk
+# Tab 2
 # ----------------------------
 with tab2:
     colL, colR = st.columns([1,2])
@@ -586,7 +591,7 @@ with tab2:
         st.plotly_chart(fig_map, use_container_width=True)
 
 # ----------------------------
-# Tab 3 — Speed and Severity
+# Tab 3
 # ----------------------------
 with tab3:
     st.subheader(f"🛡️ Crash Risk Profile: {current_focus}")
@@ -660,7 +665,7 @@ with tab3:
         st.warning("No mode data available for this selection.")
 
 # ----------------------------
-# Tab 4 — Temporal Patterns
+# Tab 4
 # ----------------------------
 with tab4:
     st.subheader(f"Temporal Patterns: {current_focus}")
@@ -727,7 +732,7 @@ with tab4:
     st.plotly_chart(fig, use_container_width=True)
 
 # ----------------------------
-# Tab 5 — Transportation Mode Analysis
+# Tab 5
 # ----------------------------
 with tab5:
     st.subheader(f"📊 Economic Impact by Transportation Type: {current_focus}")
