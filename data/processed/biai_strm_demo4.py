@@ -509,15 +509,19 @@ def action_bars(df, top_n=50):
 
     # Sort and take top N
     df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-    agg = (
-        df_bar
-        .groupby("best_action_label")
-        .agg(total_reduction=("expected_reduction_amount", "sum"),
-             locations=("location_id", "count"))
-        .reset_index()
-    )  
+
+    # Aggregate existing data
+    agg = df_bar.groupby("best_action_label").agg(
+        total_reduction=("expected_reduction_amount", "sum"),
+        locations=("location_id", "count")
+    ).reset_index()
+    
+    # Reindex so ALL actions appear
     agg = agg.set_index("best_action_label").reindex(full_action_labels, fill_value=0).reset_index()
     agg = agg.rename(columns={"best_action_label": "Recommended action"})
+    
+    # Ensure locations is numeric and filled
+    agg["locations"] = pd.to_numeric(agg["locations"], errors="coerce").fillna(0).astype(int)
 
     c1, c2 = st.columns(2)
     c1.altair_chart(
