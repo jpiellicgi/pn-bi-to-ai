@@ -228,7 +228,7 @@ def build_map(df, top_n=50):
     #                for a in all_actions if a in pairs["best_action"].values]
     # --- FIX: Build category order ONLY from df_map, in exact df_map order ---
     pairs = (
-        df_map[["best_action_label"]]
+        df_map[["best_action_label","best_action_label"]]
         .dropna()
         .drop_duplicates()
     )
