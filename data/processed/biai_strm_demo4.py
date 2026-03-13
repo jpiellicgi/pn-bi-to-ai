@@ -262,20 +262,22 @@ def build_map(df, top_n=50, all_actions=None):
     )
     
     # Custom tooltip
+    customdata = np.stack([
+        df_map["best_action_label"].astype(str),
+        df_map["pred_est_ttl_comp_cost"].astype(float),
+        df_map["expected_reduction_amount"].astype(float),
+        df_map["pct_reduction_norm"].astype(float),
+        df_map["address_short"].astype(str)
+    ], axis=-1)
+    
     fig.update_traces(
+        customdata=customdata,
         hovertemplate=
             "<b>%{customdata[0]}</b><br>" +
             "Estimated loss: %{customdata[1]:$,.0f}<br>" +
             "Expected reduction: %{customdata[2]:$,.0f}<br>" +
             "Percent reduction: %{customdata[3]:.1%}<br>" +
-            "Address: %{customdata[4]}<extra></extra>",
-        customdata=np.stack((
-            df_map["best_action_label"],
-            df_map["pred_est_ttl_comp_cost"],
-            df_map["expected_reduction_amount"],
-            df_map["pct_reduction_norm"],
-            df_map["address_short"],
-        ), axis=-1)
+            "Address: %{customdata[4]}<extra></extra>"
     )
 
     # Marker and layout tweaks
