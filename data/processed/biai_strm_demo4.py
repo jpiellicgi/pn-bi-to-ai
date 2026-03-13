@@ -246,11 +246,10 @@ def build_map(df, top_n=50):
     DEFAULT_COLOR = "rgb(120,120,120)"
 
     # Map internal keys → pretty labels → colors
-    label_to_color = {}
-    for _, row in pairs.iterrows():
-        orig = row["best_action"]
-        lbl = row["best_action_label"]
-        label_to_color[lbl] = ACTION_COLORS.get(orig, DEFAULT_COLOR))
+    label_to_color = {
+        pretty_action(a): ACTION_COLORS.get(a, DEFAULT_COLOR)
+        for a in full_actions
+    }
 
     # ---- FULL LEGEND FIX — build figure manually ----
     fig = go.Figure()
