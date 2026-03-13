@@ -492,7 +492,11 @@ def build_map(df, top_n=50):
 #     c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="total_reduction:Q"), use_container_width=True)
 #     c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="locations:Q"), use_container_width=True)
 def action_bars(df, top_n=50):
-    
+
+    # Sort and take top N
+    df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+
+    # Full list of all actions (use internal keys)
     full_actions = [
         "reduce_speed_limit",
         "increase_enforcement",
@@ -502,47 +506,61 @@ def action_bars(df, top_n=50):
         "micromobility_zone_controls"
     ]
     full_action_labels = [pretty_action(a) for a in full_actions]
-    # Ensure label column exists
-    if "best_action_label" not in df.columns:
-        df = df.copy()
-        df["best_action_label"] = df["best_action"].apply(pretty_action)
 
-    # Sort and take top N
-    df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-
-    # Aggregate existing data
+    # Aggregate *actual* data (may contain fewer than all actions)
     agg = df_bar.groupby("best_action_label").agg(
         total_reduction=("expected_reduction_amount", "sum"),
         locations=("location_id", "count")
     ).reset_index()
-    
-    # Reindex so ALL actions appear
-    agg = agg.set_index("best_action_label").reindex(full_action_labels, fill_value=0).reset_index()
-    agg = agg.rename(columns={"best_action_label": "Recommended action"})
-    
-    # Ensure locations is numeric and filled
-    agg["locations"] = pd.to_numeric(agg["locations"], errors="coerce").fillna(0).astype(int)
 
+    # --- FORCE AGG TO INCLUDE ALL ACTIONS ---
+    # Create a full-frame template
+    full_frame = pd.DataFrame({
+        "Recommended action": full_action_labels,
+        "total_reduction": [0.0] * len(full_action_labels),
+        "locations": [0] * len(full_action_labels),
+    })
+
+    # Normalize agg column names BEFORE merging
+    agg = agg.rename(columns={"best_action_label": "Recommended action"})
+
+    # Merge actual values into the full list
+    agg_full = full_frame.merge(agg, on="Recommended action", how="left", suffixes=("", "_actual"))
+
+    # Fill missing values
+    agg_full["total_reduction"] = agg_full["total_reduction_actual"].fillna(agg_full["total_reduction"])
+    agg_full["locations"] = agg_full["locations_actual"].fillna(agg_full["locations"]).astype(int)
+
+    # Final cleanup
+    agg_full = agg_full[["Recommended action", "total_reduction", "locations"]]
+
+    # LEFT chart — total expected reduction
     c1, c2 = st.columns(2)
+
     c1.altair_chart(
-        alt.Chart(agg).mark_bar(color="#5236ab").encode(
-            x=alt.X("Recommended action:N", sort='-y', title="Recommended action"),
+        alt.Chart(agg_full).mark_bar(color="#5236ab").encode(
+            x=alt.X("Recommended action:N", title="Recommended action", sort=None),
             y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"),
             tooltip=[
-                alt.Tooltip("best_action_label:N", title="Recommended action"),
-                alt.Tooltip("total_reduction:Q", title="Total expected reduction", format="$,.0f")
+                alt.Tooltip("Recommended action:N"),
+                alt.Tooltip("total_reduction:Q", format="$,.0f"),
             ]
         ),
         use_container_width=True
     )
+
+    # RIGHT chart — number of locations
     c2.altair_chart(
-        alt.Chart(agg).mark_bar(color="#5236ab").encode(
-            x=alt.X("best_action_label:N", sort='-y', title="Recommended action"),
-            y=alt.Y("locations:Q", title="Number of locations")
+        alt.Chart(agg_full).mark_bar(color="#5236ab").encode(
+            x=alt.X("Recommended action:N", title="Recommended action", sort=None),
+            y=alt.Y("locations:Q", title="Number of locations"),
+            tooltip=[
+                alt.Tooltip("Recommended action:N"),
+                alt.Tooltip("locations:Q")
+            ]
         ),
         use_container_width=True
     )
-import re
 
 def clean_rationale(text: str) -> str:
     import re
