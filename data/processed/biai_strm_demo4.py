@@ -540,7 +540,7 @@ def action_bars(df, top_n=50):
 
     c1.altair_chart(
         alt.Chart(agg_full).mark_bar(color="#5236ab").encode(
-            x=alt.X("Recommended action:N", title="Recommended action", sort=None),
+            x=alt.X("Recommended action:N", title="Recommended action", sort=agg_full["Recommended action"].tolist()),
             y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"),
             tooltip=[
                 alt.Tooltip("Recommended action:N"),
@@ -553,7 +553,7 @@ def action_bars(df, top_n=50):
     # RIGHT chart — number of locations
     c2.altair_chart(
         alt.Chart(agg_full).mark_bar(color="#5236ab").encode(
-            x=alt.X("Recommended action:N", title="Recommended action", sort=None),
+            x=alt.X("Recommended action:N", title="Recommended action", sort=agg_full["Recommended action"].tolist()),
             y=alt.Y("locations:Q", title="Number of locations"),
             tooltip=[
                 alt.Tooltip("Recommended action:N"),
