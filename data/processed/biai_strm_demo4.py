@@ -253,18 +253,29 @@ def build_map(df, top_n=50, all_actions=None):
         df_map,
         lat="latitude",
         lon="longitude",
-        color="best_action_label",  # <- pretty labels in legend
+        color="best_action_label",
         color_discrete_map=label_to_color,
         category_orders={"best_action_label": label_order},
-        hover_name="best_action_label",
-        hover_data={
-            "expected_reduction_amount": ":,.0f",
-            "latitude": False,
-            "longitude": False,
-        },
         zoom=10,
         center=dict(lat=center_lat, lon=center_lon),
         height=550,
+    )
+    
+    # Custom tooltip
+    fig.update_traces(
+        hovertemplate=
+            "<b>%{customdata[0]}</b><br>" +
+            "Estimated loss: %{customdata[1]:$,.0f}<br>" +
+            "Expected reduction: %{customdata[2]:$,.0f}<br>" +
+            "Percent reduction: %{customdata[3]:.1%}<br>" +
+            "Address: %{customdata[4]}<extra></extra>",
+        customdata=np.stack((
+            df_map["best_action_label"],
+            df_map["pred_est_ttl_comp_cost"],
+            df_map["expected_reduction_amount"],
+            df_map["pct_reduction_norm"],
+            df_map["address_short"],
+        ), axis=-1)
     )
 
     # Marker and layout tweaks
