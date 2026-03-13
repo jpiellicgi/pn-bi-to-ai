@@ -234,9 +234,6 @@ def build_map(df, top_n=50):
     )
     label_order = pairs["best_action_label"].tolist()
 
-# Critical: this list MUST contain every category, in the exact order it appears in df_map
-label_order = pairs["best_action_label"].tolist()
-
     # Color mapping (fallback to gray if missing)
     ACTION_COLORS_RGB = {
         "reduce_speed_limit": (195, 10, 50),
