@@ -526,6 +526,7 @@ def action_bars(df, top_n=50):
 
     # Merge actual values into the full list
     agg_full = full_frame.merge(agg, on="Recommended action", how="left", suffixes=("", "_actual"))
+    agg_full = agg_full.sort_values("total_reduction", ascending=False)
 
     # Fill missing values
     agg_full["total_reduction"] = agg_full["total_reduction_actual"].fillna(agg_full["total_reduction"])
