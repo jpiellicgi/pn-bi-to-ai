@@ -229,7 +229,7 @@ def build_map(df, top_n=50, all_actions=None):
         "increase_enforcement": (40, 90, 180),
         "improve_crosswalks": (142, 84, 255),
         "add_speed_bumps": (215, 45, 125),
-        "work_zone_controls: (227, 25, 55),
+        "work_zone_controls": (227, 25, 55),
         "micormobility_zone_controls": (82,54, 171)
     }
     # "reduce_speed_limit": (227, 25, 55),
