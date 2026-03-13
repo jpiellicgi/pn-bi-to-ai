@@ -211,7 +211,7 @@ def build_map(df, top_n=50, all_actions=None):
     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
     
     # DEBUG 1: What the map is actually plotting (and in what order)
-    st.write("DEBUG: df_map rows", df_map.reset_index(drop=True)[["latitude", "longitude", "address_short", "best_action_label"]]
+    st.write("DEBUG: df_map rows", df_map.reset_index(drop=True)[["latitude", "longitude", "address_short", "best_action_label"]])
 
     # Legend/category order
     if all_actions is None:
