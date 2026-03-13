@@ -253,8 +253,8 @@ def build_map(df, top_n=50):
     for action_label, color in label_to_color.items():
         fig.add_trace(
             go.Scattermapbox(
-                lat=[],
-                lon=[],
+                lat=[None],
+                lon=[None],
                 mode="markers",
                 marker=dict(size=10, color=color, opacity=1),
                 name=action_label,
