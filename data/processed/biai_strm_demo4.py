@@ -495,7 +495,11 @@ def action_bars(df, top_n=50):
     c1.altair_chart(
         alt.Chart(agg).mark_bar(color="#5236ab").encode(
             x=alt.X("best_action_label:N", sort='-y', title="Recommended action"),
-            y=alt.Y("total_reduction:Q", title="Total expected reduction ($)")
+            y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"),
+            tooltip=[
+                alt.Tooltip("best_action_label:N", title="Recommended action"),
+                alt.Tooltip("total_reduction:Q", title="Total expected reduction", format="$.0f")
+            ]
         ),
         use_container_width=True
     )
