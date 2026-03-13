@@ -513,46 +513,54 @@ def action_bars(df, top_n=50):
 import re
 
 def clean_rationale(text: str) -> str:
-    """
-    Lightly smooth the AI rationale to sound more natural and conversational
-    without changing meaning.
-    """
-    if not text or not isinstance(text, str):
+    import re
+
+    if not isinstance(text, str) or not text.strip():
         return text
 
     t = text.strip()
 
-    # Remove stiff lead-ins
-    lead_in_patterns = [
-        r"^Based on the model[^,]*,?\s*",
-        r"^According to the model[^,]*,?\s*",
-        r"^Given these factors,?\s*",
-        r"^Given the conditions[^,]*,?\s*",
-        r"^The model indicates that\s*",
-        r"^The analysis shows that\s*",
-    ]
-    for pat in lead_in_patterns:
-        t = re.sub(pat, "", t, flags=re.IGNORECASE)
+    # Split into sentence-like units
+    sentences = [s.strip() for s in re.split(r"[.]\s*", t) if s.strip()]
 
-    # Make tone more conversational
-    replacements = {
-        "it is recommended to": "a good next step would be to",
-        "the recommended action is": "the suggested action is",
-        "this would help to": "this would help",
-        "in order to": "to",
-        "due to the fact that": "because",
-        "overall," : "overall,",
-        "therefore," : "so,",
-    }
+    cleaned = []
 
-    for old, new in replacements.items():
-        t = re.sub(old, new, t, flags=re.IGNORECASE)
+    for s in sentences:
 
-    # Fix double spaces, stray punctuation
-    t = re.sub(r"\s+", " ", t)
-    t = re.sub(r"\s+([,.])", r"\1", t)
+        # --- SPECIFIC TRANSFORMATIONS for your actual patterns ---
+        if s.lower().startswith("pedestrian involvement suggests reducing conflict points"):
+            cleaned.append(
+                "Improving pedestrian visibility and reducing conflict points here would help lower crash risk."
+            )
+            continue
 
-    return t.strip()
+        if s.lower().startswith("pedestrian involvement detected"):
+            cleaned.append(
+                "This area sees meaningful pedestrian activity, which increases the chance of conflicts."
+            )
+            continue
+
+        if s.lower().startswith("nighttime conditions detected"):
+            cleaned.append(
+                "Crashes here often occur at night, when visibility is lower."
+            )
+            continue
+
+        if s.lower().startswith("higher-speed environment detected"):
+            cleaned.append(
+                "The roadway environment supports higher speeds, which increases crash severity."
+            )
+            continue
+
+        # fallback: light cleaning
+        cleaned.append(s)
+
+    # Combine into a single normal paragraph
+    final_text = " ".join(cleaned)
+    final_text = re.sub(r"\s+", " ", final_text).strip()
+
+    return final_text
+
 def ranked_table_and_details(df, top_n):
     left, right = st.columns([1.35, 1])
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
