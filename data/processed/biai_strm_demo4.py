@@ -510,6 +510,49 @@ def action_bars(df, top_n=50):
         ),
         use_container_width=True
     )
+import re
+
+def clean_rationale(text: str) -> str:
+    """
+    Lightly smooth the AI rationale to sound more natural and conversational
+    without changing meaning.
+    """
+    if not text or not isinstance(text, str):
+        return text
+
+    t = text.strip()
+
+    # Remove stiff lead-ins
+    lead_in_patterns = [
+        r"^Based on the model[^,]*,?\s*",
+        r"^According to the model[^,]*,?\s*",
+        r"^Given these factors,?\s*",
+        r"^Given the conditions[^,]*,?\s*",
+        r"^The model indicates that\s*",
+        r"^The analysis shows that\s*",
+    ]
+    for pat in lead_in_patterns:
+        t = re.sub(pat, "", t, flags=re.IGNORECASE)
+
+    # Make tone more conversational
+    replacements = {
+        "it is recommended to": "a good next step would be to",
+        "the recommended action is": "the suggested action is",
+        "this would help to": "this would help",
+        "in order to": "to",
+        "due to the fact that": "because",
+        "overall," : "overall,",
+        "therefore," : "so,",
+    }
+
+    for old, new in replacements.items():
+        t = re.sub(old, new, t, flags=re.IGNORECASE)
+
+    # Fix double spaces, stray punctuation
+    t = re.sub(r"\s+", " ", t)
+    t = re.sub(r"\s+([,.])", r"\1", t)
+
+    return t.strip()
 def ranked_table_and_details(df, top_n):
     left, right = st.columns([1.35, 1])
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
@@ -549,7 +592,9 @@ def ranked_table_and_details(df, top_n):
                 """
             )
             st.markdown("**Rationale:**")
-            st.write(str(row.get("ai_rationale", "")))
+            cleaned = clean_rationale(str(row.get("ai_rationale", "")))
+            st.write(cleaned)
+
 # ----------------------------
 # Execution & UI
 # ----------------------------
