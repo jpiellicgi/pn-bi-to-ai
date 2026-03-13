@@ -573,7 +573,7 @@ def ranked_table_and_details(df, top_n):
         ranked_display["Cost after action"] = ranked_display["Cost after action"].map(fmt_dollars)
         ranked_display["Crash cost est."] = ranked_display["Crash cost est."].map(fmt_dollars)
         st.dataframe(ranked_display, use_container_width=True, hide_index=True)
-        st.cache_data.clear()
+        
     with right:
         st.subheader("")
         options = ranked[["address_short", "location_id"]].fillna("").copy()
@@ -591,9 +591,17 @@ def ranked_table_and_details(df, top_n):
                 **Expected cost after action:** {fmt_dollars(row['expected_cost_after_action'])}  
                 """
             )
+            # st.markdown("**Rationale:**")
+            # cleaned = clean_rationale(str(row.get("ai_rationale", "")))
+            # st.write(cleaned)
             st.markdown("**Rationale:**")
-            cleaned = clean_rationale(str(row.get("ai_rationale", "")))
-            st.write(cleaned)
+
+            raw_text = str(row.get("ai_rationale", ""))
+            
+            cleaned = clean_rationale(raw_text)
+            
+            st.write("RAW:", raw_text)
+            st.write("CLEANED:", cleaned)
 
 # ----------------------------
 # Execution & UI
