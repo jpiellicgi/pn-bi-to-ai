@@ -498,7 +498,7 @@ def action_bars(df, top_n=50):
             y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"),
             tooltip=[
                 alt.Tooltip("best_action_label:N", title="Recommended action"),
-                alt.Tooltip("total_reduction:Q", title="Total expected reduction", format="$.0f")
+                alt.Tooltip("total_reduction:Q", title="Total expected reduction", format="$,.0f")
             ]
         ),
         use_container_width=True
