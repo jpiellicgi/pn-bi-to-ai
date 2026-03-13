@@ -200,8 +200,6 @@ def prepare_prescriptive_df(df_prescriptive):
     df["best_action_label"] = df["best_action"].apply(pretty_action)
     return df
     return df
-
-# def build_map(df, top_n=50, all_actions=None):
 def build_map(df, top_n=50):
     # Ensure display label column exists
     if "best_action_label" not in df.columns:
@@ -209,54 +207,47 @@ def build_map(df, top_n=50):
         df["best_action_label"] = df["best_action"].apply(pretty_action)
 
     # Sort and take top N
-    df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
-    
-    # DEBUG 1: What the map is actually plotting (and in what order)
-    st.write("DEBUG: df_map rows", df_map.reset_index(drop=True)[["latitude", "longitude", "address_short", "best_action_label"]])
+    df_map = (
+        df.sort_values("expected_reduction_amount", ascending=False)
+          .head(top_n)
+          .copy()
+          .reset_index(drop=True)
+    )
 
-    # Legend/category order
-    # if all_actions is None:
-    #     all_actions = list(df_map["best_action"].dropna().unique())
-    # # Build label order in the same order as actions, but de-duplicated and aligned
-    # pairs = (
-    #     df_map[["best_action", "best_action_label"]]
-    #     .dropna()
-    #     .drop_duplicates()
-    # )
-    # # Preserve the original actions order but map to their labels
-    # label_order = [pairs.loc[pairs["best_action"] == a, "best_action_label"].iloc[0] 
-    #                for a in all_actions if a in pairs["best_action"].values]
-    # --- FIX: Build category order ONLY from df_map, in exact df_map order ---
+    # ---- FIX: build category order ONLY from df_map actions ----
+    # This prevents Plotly from reordering the data internally (which causes tooltip mismatch)
     pairs = (
-        df_map[["best_action_label","best_action_label"]]
+        df_map[["best_action", "best_action_label"]]
         .dropna()
         .drop_duplicates()
     )
     label_order = pairs["best_action_label"].tolist()
 
-    # Color mapping (fallback to gray if missing)
+    # ---- Colors ----
     ACTION_COLORS_RGB = {
         "reduce_speed_limit": (195, 10, 50),
         "increase_enforcement": (40, 90, 180),
         "improve_crosswalks": (142, 84, 255),
         "add_speed_bumps": (215, 45, 125),
         "work_zone_controls": (230, 126, 34),
-        "micromobility_zone_controls": (82,54, 171)
+        "micromobility_zone_controls": (82, 54, 171)
     }
+
     def _rgb_to_plotly(rgb_tuple):
         r, g, b = rgb_tuple
         return f"rgb({r},{g},{b})"
+
     ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
     DEFAULT_COLOR = "rgb(120,120,120)"
 
-    # Map pretty labels to colors using the original action color if we have it
+    # Map pretty labels → correct Plotly colors
     label_to_color = {}
     for _, row in pairs.iterrows():
-        orig = row["best_action"]
-        lbl = row["best_action_label"]
+        orig = row["best_action"]                  # internal key
+        lbl = row["best_action_label"]             # pretty legend label
         label_to_color[lbl] = ACTION_COLORS.get(orig, DEFAULT_COLOR)
 
-    # Center map on data
+    # ---- Create the map ----
     center_lat = df_map["latitude"].mean()
     center_lon = df_map["longitude"].mean()
 
@@ -271,8 +262,8 @@ def build_map(df, top_n=50):
         center=dict(lat=center_lat, lon=center_lon),
         height=550,
     )
-    
-    # Custom tooltip
+
+    # ---- Tooltip data (aligned exactly with df_map rows) ----
     customdata = np.stack([
         df_map["best_action_label"].astype(str),
         df_map["pred_est_ttl_comp_cost"].astype(float),
@@ -281,9 +272,6 @@ def build_map(df, top_n=50):
         df_map["address_short"].astype(str)
     ], axis=-1)
 
-    # DEBUG 2: What your tooltip data looks like in row order
-    st.write("DEBUG: tooltip customdata", pd.DataFrame(customdata, columns=["action", "loss", "reduction", "pct", "address"]))
-    
     fig.update_traces(
         customdata=customdata,
         hovertemplate=
@@ -291,18 +279,121 @@ def build_map(df, top_n=50):
             "Estimated loss: %{customdata[1]:$,.0f}<br>" +
             "Expected reduction: %{customdata[2]:$,.0f}<br>" +
             "Percent reduction: %{customdata[3]:.1%}<br>" +
-            "Address: %{customdata[4]}<extra></extra>"
+            "Address: %{customdata[4]}<extra></extra>",
+        marker=dict(size=10, opacity=0.9)
     )
 
-    # Marker and layout tweaks
-    fig.update_traces(marker=dict(size=10, opacity=0.9))
+    # Layout
     fig.update_layout(
-        mapbox_style="open-street-map",  # <- no Mapbox token required
+        mapbox_style="open-street-map",
         margin=dict(l=0, r=0, t=0, b=0),
         legend_title_text="Recommended action",
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+# def build_map(df, top_n=50, all_actions=None):
+# def build_map(df, top_n=50):
+#     # Ensure display label column exists
+#     if "best_action_label" not in df.columns:
+#         df = df.copy()
+#         df["best_action_label"] = df["best_action"].apply(pretty_action)
+
+#     # Sort and take top N
+#     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+    
+#     # DEBUG 1: What the map is actually plotting (and in what order)
+#     st.write("DEBUG: df_map rows", df_map.reset_index(drop=True)[["latitude", "longitude", "address_short", "best_action_label"]])
+
+#     # Legend/category order
+#     # if all_actions is None:
+#     #     all_actions = list(df_map["best_action"].dropna().unique())
+#     # # Build label order in the same order as actions, but de-duplicated and aligned
+#     # pairs = (
+#     #     df_map[["best_action", "best_action_label"]]
+#     #     .dropna()
+#     #     .drop_duplicates()
+#     # )
+#     # # Preserve the original actions order but map to their labels
+#     # label_order = [pairs.loc[pairs["best_action"] == a, "best_action_label"].iloc[0] 
+#     #                for a in all_actions if a in pairs["best_action"].values]
+#     # --- FIX: Build category order ONLY from df_map, in exact df_map order ---
+#     pairs = (
+#         df_map[["best_action_label","best_action_label"]]
+#         .dropna()
+#         .drop_duplicates()
+#     )
+#     label_order = pairs["best_action_label"].tolist()
+
+#     # Color mapping (fallback to gray if missing)
+#     ACTION_COLORS_RGB = {
+#         "reduce_speed_limit": (195, 10, 50),
+#         "increase_enforcement": (40, 90, 180),
+#         "improve_crosswalks": (142, 84, 255),
+#         "add_speed_bumps": (215, 45, 125),
+#         "work_zone_controls": (230, 126, 34),
+#         "micromobility_zone_controls": (82,54, 171)
+#     }
+#     def _rgb_to_plotly(rgb_tuple):
+#         r, g, b = rgb_tuple
+#         return f"rgb({r},{g},{b})"
+#     ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
+#     DEFAULT_COLOR = "rgb(120,120,120)"
+
+#     # Map pretty labels to colors using the original action color if we have it
+#     label_to_color = {}
+#     for _, row in pairs.iterrows():
+#         orig = row["best_action"]
+#         lbl = row["best_action_label"]
+#         label_to_color[lbl] = ACTION_COLORS.get(orig, DEFAULT_COLOR)
+
+#     # Center map on data
+#     center_lat = df_map["latitude"].mean()
+#     center_lon = df_map["longitude"].mean()
+
+#     fig = px.scatter_mapbox(
+#         df_map,
+#         lat="latitude",
+#         lon="longitude",
+#         color="best_action_label",
+#         color_discrete_map=label_to_color,
+#         category_orders={"best_action_label": label_order},
+#         zoom=10,
+#         center=dict(lat=center_lat, lon=center_lon),
+#         height=550,
+#     )
+    
+#     # Custom tooltip
+#     customdata = np.stack([
+#         df_map["best_action_label"].astype(str),
+#         df_map["pred_est_ttl_comp_cost"].astype(float),
+#         df_map["expected_reduction_amount"].astype(float),
+#         df_map["pct_reduction_norm"].astype(float),
+#         df_map["address_short"].astype(str)
+#     ], axis=-1)
+
+#     # DEBUG 2: What your tooltip data looks like in row order
+#     st.write("DEBUG: tooltip customdata", pd.DataFrame(customdata, columns=["action", "loss", "reduction", "pct", "address"]))
+    
+#     fig.update_traces(
+#         customdata=customdata,
+#         hovertemplate=
+#             "<b>%{customdata[0]}</b><br>" +
+#             "Estimated loss: %{customdata[1]:$,.0f}<br>" +
+#             "Expected reduction: %{customdata[2]:$,.0f}<br>" +
+#             "Percent reduction: %{customdata[3]:.1%}<br>" +
+#             "Address: %{customdata[4]}<extra></extra>"
+#     )
+
+#     # Marker and layout tweaks
+#     fig.update_traces(marker=dict(size=10, opacity=0.9))
+#     fig.update_layout(
+#         mapbox_style="open-street-map",  # <- no Mapbox token required
+#         margin=dict(l=0, r=0, t=0, b=0),
+#         legend_title_text="Recommended action",
+#     )
+
+#     st.plotly_chart(fig, use_container_width=True)
 # def build_map(df, top_n=50, all_actions=None):
 #     # Sort and take top N
 #     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
