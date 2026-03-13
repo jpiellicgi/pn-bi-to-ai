@@ -1212,6 +1212,7 @@ with tab6:
                 "Recommended action",
                 options=all_actions,
                 default=all_actions,
+                format_func=pretty_action,
                 key="presc_actions"
             )
     
