@@ -818,31 +818,48 @@ with tab6:
 
     if df_prescriptive_raw is None:
         st.error("Prescriptive data unavailable.")
+
     else:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
 
-        # Corridor filter
         if selected_street != "All Corridors":
             dfp = dfp[dfp["address_short"].str.contains(selected_street, case=False, na=False)]
 
         all_actions = sorted(dfp["best_action"].dropna().unique())
 
-        selected_actions = st.multiselect(
-            "Recommended action",
-            options=all_actions,
-            default=all_actions,
-            format_func=pretty_action,
-            key="presc_actions"
-        )
+        # --- LAYOUT ROW: FILTERS (LEFT) + KPIs (RIGHT) ---
+        colL, colR = st.columns([3, 2], gap="large")
 
-        top_n = st.slider("Top N locations", 10, 300, 50, 10, key="presc_topn")
+        with colL:
+            selected_actions = st.multiselect(
+                "Recommended action",
+                options=all_actions,
+                default=all_actions,
+                format_func=pretty_action,
+                key="presc_actions"
+            )
 
-        with st.expander("More filters"):
-            if "severity" in dfp.columns:
-                st.multiselect("Severity", sorted(dfp["severity"].dropna().unique()), key="presc_severity")
-            if "district" in dfp.columns:
-                st.multiselect("District", sorted(dfp["district"].dropna().unique()), key="presc_district")
+            top_n = st.slider(
+                "Top N locations",
+                10, 300, 50, 10,
+                key="presc_topn"
+            )
 
+            with st.expander("More filters"):
+                if "severity" in dfp.columns:
+                    st.multiselect(
+                        "Severity",
+                        sorted(dfp["severity"].dropna().unique()),
+                        key="presc_severity"
+                    )
+                if "district" in dfp.columns:
+                    st.multiselect(
+                        "District",
+                        sorted(dfp["district"].dropna().unique()),
+                        key="presc_district"
+                    )
+
+        # --- APPLY FILTERS ---
         dfp_f = dfp[dfp["best_action"].isin(selected_actions)].copy()
 
         if st.session_state.get("presc_severity"):
@@ -859,17 +876,20 @@ with tab6:
                  .head(top_n)
         )
 
-        cLeft, cRight = st.columns([3,2], gap="large")
-
-        with cRight:
+        # --- KPIs (RIGHT COLUMN) ---
+        with colR:
             total_reduction = float(df_topn["expected_reduction_amount"].sum())
-            pct_series = df_topn["pct_reduction"] / (100 if df_topn["pct_reduction"].max() > 1 else 1)
+
+            pct_series = df_topn["pct_reduction"] / (
+                100 if df_topn["pct_reduction"].max() > 1 else 1
+            )
             median_pct = f"{pct_series.median():.1%}"
 
             st.metric("Total Expected Reduction", f"${total_reduction:,.0f}")
             st.metric("Median % Reduction", median_pct)
             st.metric("Locations in Scope", f"{len(df_topn):,}")
 
+        # --- MAP + BARS + TABLE ---
         build_map(dfp_f, top_n=top_n)
         action_bars(dfp_f, top_n=top_n)
         ranked_table_and_details(dfp_f, top_n=top_n)
