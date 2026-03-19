@@ -1266,9 +1266,9 @@ with tab6:
      # --- ADDED: High Level Insights ---
     st.info("""
         **💡 High-Level Insights:**
-        - Applying the recommended actions to top 100 locations by expected reduction can save **$60,915,699** which is a **32.0%** in total costs of crashes.
-        - **Improve crosswalks** is the most recommended action by total expected reduction in crash cost and by number of locations where it has the largest reduction.
-        - The single biggest expected reduction in crash cost is **$1,095,866** at **4501 E BEN WHITE BLVD SVRD EB BLVD** when the action to ""improve crosswalks** is applied.
+        - Applying the recommended actions at the top 100 locations can save **$60.9M**, a **32% reduction** in crash costs.
+        - **Improving crosswalks** provides the largest total reduction in crash costs and is the most common top‑impact action across locations.
+        - The single largest expected reduction—**$1,095,866**—occurs at **4501 E BEN WHITE BLVD SVRD EB**, driven by **improving crosswalks**.
     """)
     # ----------------------------------
     
