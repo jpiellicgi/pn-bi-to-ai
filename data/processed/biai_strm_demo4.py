@@ -34,6 +34,9 @@ CSV_PATH1 = f"{DATA_DIR}/{CSV_FILENAME1}"
 CSV_FILENAME2 = "df_prescriptive_final_20260204_102224.csv"
 CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 
+CSV_FILENAME3 = "cost_forecast_2026.csv"
+CSV_PATH3 = f"{DATA_DIR}/{CSV_FILENAME3}"
+
 # --- 3. SMART ASSET LOADER ---
 def get_cgi_logo():
     """
@@ -107,9 +110,6 @@ def load_partner_data(url: str) -> pd.DataFrame:
     df['hour_label'] = df['HOUR'].apply(format_hour)
     labels_in_order = [format_hour(h) for h in range(24)]
     df['hour_label'] = pd.Categorical(df['hour_label'], categories=labels_in_order, ordered=True)
-
-    #Hour range formatting for heatmap visual
-    #heat_df["Time_Range"] = heat_df["HOUR"].apply(get_range_label)
 
     sev_map = {1: "Fatal", 2: "Serious Injury", 3: "Minor Injury", 4: "Possible Injury", 0: "No Injury", 5: "Unknown"}
     df["Severity_Label"] = df["crash_sev_id"].map(sev_map)
@@ -693,6 +693,12 @@ try:
 except Exception as e:
     df_prescriptive_raw = None
 
+# try:
+#     df_cost_forecast_2026 = load_partner_data(CSV_PATH3)
+# except Exception as e:
+#     st.error(f"Forecasting dataset load failed: {e}")
+#     st.stop()   
+
 # --- SIDEBAR (Logo Removed from here) ---
 with st.sidebar:
     st.title("Global Filters")
@@ -723,7 +729,7 @@ k2.metric("Lives Lost", int(df["death_cnt"].sum()))
 k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 
 # --- TABS ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🚶Top Predictors", "🗺️ Geographic Risk", "📊 Speed and Severity", "⏰ Temporal Patterns", "💰 Transportation Mode Analysis", "🧠 Prescriptive Actions"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["🚶Top Predictors", "🗺️ Geographic Risk", "🚨 Speed and Severity", "⏰ Temporal Patterns", "💰 Transportation Mode Analysis", "🧠 Prescriptive Actions", "📈 2026 Monthly Forecast" ])
 
 with tab1:
     st.write("##### The top predictors and prescriptive actions were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.")
@@ -940,7 +946,7 @@ with tab3:
 
     # --- ROW 2: New Information on Other Modes ---
     st.markdown("---")
-    st.write("### 🚲 Transportation Mode Involvement")
+    st.write("#### 🚲 Transportation Mode Involvement")
     st.info("The chart below shows the frequency of each mode involved in the current selection. Note: A single crash may involve multiple modes (e.g., a Car vs. Bicycle incident).")
 
     # 1. Prepare data for the 11 modes
@@ -989,22 +995,25 @@ with tab4:
     st.write("""The visuals on this page shows the number of crashes that occurred during different timeframes as well the average estimated cost and the severity of those crashes.""")
     st.info("""
             **💡High-Level Insights:**
-            - Most crashes occur during Monday-Friday from 3 PM - 6 PM.
-            - The most expensive crashes occur at 6 AM and 8 PM.
-            - The most severe crashes (those with serious or fatal injuries) occur from 3 PM-5 PM.
+            - Most crashes occur during Monday-Friday from **3 PM** - **6 PM**.
+            - The most expensive crashes occur at **6 AM** and **8 PM**.
+            - The most severe crashes (those with serious or fatal injuries) occur from **3 PM** - **5 PM**.
             
-            *Recommendation: Deploying additional resources during afternoon rush hour. Targeting solutions for pedestrian related accidents from 6 PM - 9 PM and solutions for speed-related accidents from 5 AM- 7 AM.*
+            *Recommendation: Deploying additional resources during afternoon rush hour. Targeting solutions for pedestrian-related accidents from **6 PM** - **9 PM** and solutions for speed-related accidents from **5 AM**- **7 AM**.*
             *See the prescriptive actions tab for specific solutions.*
         """)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
 
     #Density Heatmap for Number of Crashes for Day of Week and Time Frame
+    st.write("#### Density Heatmap for Number of Crashes by Day and Time Frame")
+    st.info("The visual below shows the number of crashes each day of the week in 3 hour timeframes. The darker the shade of purple, the more crashes that occurred during that timeframe.")
     heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
     fig_heat = px.density_heatmap(
         heat_df,
         x="HOUR",
         y="DAY_NAME",
         z="Count",
-        title= "Number of Crashes by Day and Hour",
         labels={"DAY_NAME": "Day", "HOUR": "Hour", "Count": "Number of Crashes"},
         color_continuous_scale="Purples",
         category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
@@ -1031,9 +1040,9 @@ with tab4:
         )
     )   
     st.plotly_chart(fig_heat, use_container_width=True)
-    st.text("The visual above shows the number of crashes each day of the week in 3 hour timeframes. The darker the shade of purple, the more crashes that occurred during that timeframe.")
 
     #Crash Severity vs. Average Estimated Costs
+    st.write("#### Crash Severity vs. Average Estimated Cost")
     df_avg_cost = df.groupby(["hour_label"], observed=False)["Estimated Total Comprehensive Cost"].mean().reset_index()
     df_severity = df.groupby(["hour_label", "Severity_Label"], observed=False).size().reset_index(name="Accident_Count")
     # Create figure with secondary y-axis
@@ -1066,7 +1075,6 @@ with tab4:
         secondary_y=True,
     )
     fig.update_layout(
-        title_text="Crash Severity vs. Average Estimated Cost",
         barmode='stack',
         hovermode="x unified", # Shows both cost and count in one tooltip
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -1080,7 +1088,8 @@ with tab4:
     #Explanatory Charts for Spikes in Average Cost 
     st.text("The spikes in the average estimated total cost can be explained by pedestrian-involvement in the crash, higher average speed limits, and outliers in the data. The visuals below show these patterns. The first visual shows which hours have the most crashes with pedestrians involved. The second visual shows the average speed limit by hour. The spike in average cost for crashes at 1 AM is due to outliers in the data. Most crashes that occur between 1 AM and 2 AM fall in the average cost range of $20k - $70k, but there were some exceptionally costly crashes that drove up the average cost.")
 
-    st.write("##### Explanatory Visuals for Spikes in Average Cost")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.write("#### Explanatory Visuals for Spikes in Average Cost")
     #Number of Crashes Involving Pedestrians by Hour
     df_pedestrian = df[df['pedestrian_involved'] == True]
     df_ped_hour = df_pedestrian.groupby("hour_label", observed=False).size().reset_index(name="Pedestrian_Crash_Count")
@@ -1159,7 +1168,7 @@ with tab5:
         st.markdown("<br>", unsafe_allow_html=True)
 
         # 4. Average Economic Cost Bar Chart (Spaced out full-width)
-        st.write("### 💰 Average Economic Cost per Accident")
+        st.write("#### 💰 Average Economic Cost per Accident")
         st.info("This chart identifies which types of accidents are the most 'expensive' on average, often highlighting the severity of incidents involving vulnerable road users.")
         
         fig_avg = px.bar(
@@ -1182,8 +1191,8 @@ with tab5:
         st.markdown("---")
 
         # 5. Enhanced Bubble Chart (Vulnerability Matrix)
-        st.write("### 🎯 Mode Vulnerability Matrix")
-        st.write("""
+        st.write("#### 🎯 Mode Vulnerability Matrix")
+        st.info("""
             **How to read this chart:**
             - **X-Axis (Horizontal):** Higher numbers mean these accidents happen more frequently.
             - **Y-Axis (Vertical):** Higher positions mean these accidents are more severe/costly per incident.
@@ -1327,3 +1336,16 @@ with tab6:
         ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
     else:
         st.error("Prescriptive data unavailable.")
+
+
+with tab7:  
+    st.subheader(f"2026 Monthly Forecast")
+    st.write("""
+        This analysis shows the monthly estimated cost for 2026. The forecasted cast was calculated by multiplying a predicted total number of crash per month by the predicted average cost per crash each month. 
+        The total number of crashes in a month was predicted using an ARIMA model to account for seasonality. The average cost per crash per month was predicted using our random forest model.
+    """)     
+
+    # df_monthly_crash_total_cost= df_cost_forecast_2026[['month','total_predicted_cost']]
+    # fig_monthly_crash_total_cost= px.bar(df_monthly_crash_total_cost, x="month", y="total_predicted_cost", text_auto=".2s")
+    # fig_monthly_crash_total_cost.update_traces(marker_color='#5236ab')
+    # st.plotly_chart(fig_monthly_crash_total_cost)  
