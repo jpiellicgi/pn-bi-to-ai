@@ -1261,6 +1261,16 @@ with tab5:
 with tab6:
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
+    st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
+
+     # --- ADDED: High Level Insights ---
+    st.info("""
+        **💡 High-Level Insights:**
+        - Applying the recommended actions to top 100 locations by expected reduction can save **$60,915,699** which is a **32.0%** in total costs of crashes.
+        - **Improve crosswalks** is the most recommended action by total expected reduction in crash cost and by number of locations where it has the largest reduction.
+        - The single biggest expected reduction in crash cost is **$1,095,866** at **4501 E BEN WHITE BLVD SVRD EB BLVD** when the action to ""improve crosswalks** is applied.
+    """)
+    # ----------------------------------
     
     if df_prescriptive_raw is not None:
         dfp = prepare_prescriptive_df(df_prescriptive_raw)
@@ -1300,8 +1310,6 @@ with tab6:
                 if "district" in dfp.columns:
                     dists = sorted(dfp["district"].dropna().unique().tolist())
                     st.multiselect("District", dists, key="presc_district")
-    
-            st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
     
             st.markdown('</div>', unsafe_allow_html=True)
             
