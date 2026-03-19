@@ -886,7 +886,14 @@ with col_map:
     st.plotly_chart(fig_m, use_container_width=True)
 
 with tab3:
-    st.subheader(f"🛡️ Speed and Severity: {current_focus}")
+    st.subheader(f"🛡️ Impact of Speed Limit: {current_focus}")
+    st.info("""
+        **💡High-Level Insights:**
+        - Most crashes result in **severe** or **minor** injuries.
+        - The largest number of crashes occur when the speed limit is **30-40 mph**.
+        - The largest number of crashes resulting in severe injuries or fatalities occur when the speed limit is **30-40 mph**.
+        - The most expensive accidents occur when the speed limit is **50-60 mph**.
+    """)
 
     r1c1, r1c2= st.columns([1, 2], gap="large")
 
@@ -959,6 +966,7 @@ with tab3:
         )
         fig.update_layout(
             barmode='stack',
+            margin=dict(t=50),
             hovermode="x unified", # Shows both cost and count in one tooltip
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             height=600,
