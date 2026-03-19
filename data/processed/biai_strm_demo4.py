@@ -205,6 +205,7 @@ def prepare_prescriptive_df(df_prescriptive):
     df["ai_rationale_short"] = df["ai_rationale"].astype(str).map(lambda x: compact_text(x, 160))
     df["best_action_label"] = df["best_action"].apply(pretty_action)
     return df
+    return df
 
 def build_map(df, top_n=50):
     # Ensure display label column exists
@@ -338,6 +339,164 @@ def build_map(df, top_n=50):
 
     st.plotly_chart(fig, use_container_width=True)
 
+# def build_map(df, top_n=50, all_actions=None):
+# def build_map(df, top_n=50):
+#     # Ensure display label column exists
+#     if "best_action_label" not in df.columns:
+#         df = df.copy()
+#         df["best_action_label"] = df["best_action"].apply(pretty_action)
+
+#     # Sort and take top N
+#     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+    
+#     # DEBUG 1: What the map is actually plotting (and in what order)
+#     st.write("DEBUG: df_map rows", df_map.reset_index(drop=True)[["latitude", "longitude", "address_short", "best_action_label"]])
+
+#     # Legend/category order
+#     # if all_actions is None:
+#     #     all_actions = list(df_map["best_action"].dropna().unique())
+#     # # Build label order in the same order as actions, but de-duplicated and aligned
+#     # pairs = (
+#     #     df_map[["best_action", "best_action_label"]]
+#     #     .dropna()
+#     #     .drop_duplicates()
+#     # )
+#     # # Preserve the original actions order but map to their labels
+#     # label_order = [pairs.loc[pairs["best_action"] == a, "best_action_label"].iloc[0] 
+#     #                for a in all_actions if a in pairs["best_action"].values]
+#     # --- FIX: Build category order ONLY from df_map, in exact df_map order ---
+#     pairs = (
+#         df_map[["best_action_label","best_action_label"]]
+#         .dropna()
+#         .drop_duplicates()
+#     )
+#     label_order = pairs["best_action_label"].tolist()
+
+#     # Color mapping (fallback to gray if missing)
+#     ACTION_COLORS_RGB = {
+#         "reduce_speed_limit": (195, 10, 50),
+#         "increase_enforcement": (40, 90, 180),
+#         "improve_crosswalks": (142, 84, 255),
+#         "add_speed_bumps": (215, 45, 125),
+#         "work_zone_controls": (230, 126, 34),
+#         "micromobility_zone_controls": (82,54, 171)
+#     }
+#     def _rgb_to_plotly(rgb_tuple):
+#         r, g, b = rgb_tuple
+#         return f"rgb({r},{g},{b})"
+#     ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
+#     DEFAULT_COLOR = "rgb(120,120,120)"
+
+#     # Map pretty labels to colors using the original action color if we have it
+#     label_to_color = {}
+#     for _, row in pairs.iterrows():
+#         orig = row["best_action"]
+#         lbl = row["best_action_label"]
+#         label_to_color[lbl] = ACTION_COLORS.get(orig, DEFAULT_COLOR)
+
+#     # Center map on data
+#     center_lat = df_map["latitude"].mean()
+#     center_lon = df_map["longitude"].mean()
+
+#     fig = px.scatter_mapbox(
+#         df_map,
+#         lat="latitude",
+#         lon="longitude",
+#         color="best_action_label",
+#         color_discrete_map=label_to_color,
+#         category_orders={"best_action_label": label_order},
+#         zoom=10,
+#         center=dict(lat=center_lat, lon=center_lon),
+#         height=550,
+#     )
+    
+#     # Custom tooltip
+#     customdata = np.stack([
+#         df_map["best_action_label"].astype(str),
+#         df_map["pred_est_ttl_comp_cost"].astype(float),
+#         df_map["expected_reduction_amount"].astype(float),
+#         df_map["pct_reduction_norm"].astype(float),
+#         df_map["address_short"].astype(str)
+#     ], axis=-1)
+
+#     # DEBUG 2: What your tooltip data looks like in row order
+#     st.write("DEBUG: tooltip customdata", pd.DataFrame(customdata, columns=["action", "loss", "reduction", "pct", "address"]))
+    
+#     fig.update_traces(
+#         customdata=customdata,
+#         hovertemplate=
+#             "<b>%{customdata[0]}</b><br>" +
+#             "Estimated loss: %{customdata[1]:$,.0f}<br>" +
+#             "Expected reduction: %{customdata[2]:$,.0f}<br>" +
+#             "Percent reduction: %{customdata[3]:.1%}<br>" +
+#             "Address: %{customdata[4]}<extra></extra>"
+#     )
+
+#     # Marker and layout tweaks
+#     fig.update_traces(marker=dict(size=10, opacity=0.9))
+#     fig.update_layout(
+#         mapbox_style="open-street-map",  # <- no Mapbox token required
+#         margin=dict(l=0, r=0, t=0, b=0),
+#         legend_title_text="Recommended action",
+#     )
+
+#     st.plotly_chart(fig, use_container_width=True)
+# def build_map(df, top_n=50, all_actions=None):
+#     # Sort and take top N
+#     df_map = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+
+#     # Legend/category order
+#     if all_actions is None:
+#         all_actions = list(df_map["best_action"].dropna().unique())
+
+#     # Color mapping (fallback to gray if missing)
+#     ACTION_COLORS_RGB = {"reduce_speed_limit": (227, 25, 55), "increase_enforcement": (82, 54, 171), "improve_crosswalks": (110, 63, 237), "add_speed_bumps": (168, 36, 101)}    
+#     def _rgb_to_plotly(rgb_tuple):
+#         r, g, b = rgb_tuple
+#         return f"rgb({r},{g},{b})"
+#     ACTION_COLORS = {k: _rgb_to_plotly(v) for k, v in ACTION_COLORS_RGB.items()}
+#     DEFAULT_COLOR = "rgb(120,120,120)"
+#     color_map = {a: ACTION_COLORS.get(a, DEFAULT_COLOR) for a in all_actions}
+
+#     # Center map on data
+#     center_lat = df_map["latitude"].mean()
+#     center_lon = df_map["longitude"].mean()
+
+#     fig = px.scatter_mapbox(
+#         df_map,
+#         lat="latitude",
+#         lon="longitude",
+#         color="best_action",
+#         color_discrete_map=color_map,
+#         category_orders={"best_action": all_actions},
+#         hover_name="best_action",
+#         hover_data={
+#             "expected_reduction_amount": ":,.0f",
+#             "latitude": False,
+#             "longitude": False,
+#         },
+#         zoom=10,
+#         center=dict(lat=center_lat, lon=center_lon),
+#         height=550,
+#     )
+
+#     # Marker and layout tweaks
+#     fig.update_traces(marker=dict(size=10, opacity=0.9))
+#     fig.update_layout(
+#         mapbox_style="open-street-map",  # <- no Mapbox token required
+#         margin=dict(l=0, r=0, t=0, b=0),
+#         legend_title_text="Recommended action",
+#     )
+
+#     st.plotly_chart(fig, use_container_width=True)
+
+# def action_bars(df,top_n=50):
+#     # Sort and take top N
+#     df_bar = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
+#     agg = df_bar.groupby("best_action").agg(total_reduction=("expected_reduction_amount", "sum"), locations=("location_id", "count")).reset_index()
+#     c1, c2 = st.columns(2)
+#     c1.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="total_reduction:Q"), use_container_width=True)
+#     c2.altair_chart(alt.Chart(agg).mark_bar(color="#5236ab").encode(x=alt.X("best_action:N", sort='-y'), y="locations:Q"), use_container_width=True)
 def action_bars(df, top_n=50):
 
     # Sort and take top N
@@ -388,7 +547,6 @@ def action_bars(df, top_n=50):
     c1.altair_chart(
         alt.Chart(agg_full).mark_bar(color="#5236ab").encode(
             x=alt.X("Recommended action:N", title="Recommended action", sort='-y'),
-            # y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"),
             y=alt.Y("total_reduction:Q", title="Total expected reduction ($)"),
             tooltip=[
                 alt.Tooltip("Recommended action:N"),
@@ -485,18 +643,22 @@ def clean_rationale(text: str) -> str:
     final_text = re.sub(r"\s+", " ", final_text)
 
     return final_text.strip()
-
 def ranked_table_and_details(df, top_n):
     left, right = st.columns([1.35, 1])
     ranked = df.sort_values("expected_reduction_amount", ascending=False).head(top_n).copy()
     with left:
         st.subheader(f"Top {top_n} locations by expected reduction")
+        # show_columns = ["Address", "location_id", "best_action_label", "expected_reduction_amount", "pct_reduction_norm","pred_est_ttl_comp_cost", "expected_cost_after_action","ai_rationale_short"]
         show_columns = [
             "Address", "location_id", "best_action_label", "expected_reduction_amount",
             "pct_reduction_norm", "pred_est_ttl_comp_cost", "expected_cost_after_action", "ai_rationale_short"
         ]
         ranked_display = ranked[show_columns].rename(columns={"address": "Address","pct_reduction_norm": "% reduction","ai_rationale_short": "Rationale", "expected_cost_after_action":"Cost after action","pred_est_ttl_comp_cost":"Crash cost est.","expected_reduction_amount":"Expected reduction","best_action_label":"Recommended action","location_id":"Location",})
-        
+        # ranked_display = ranked[show_columns].rename(columns={
+        #     "best_action_label": "best_action",
+        #     "pct_reduction_norm": "pct_reduction",
+        #     "ai_rationale_short": "ai_rationale (short)",
+        # })
         ranked_display["Expected reduction"] = ranked_display["Expected reduction"].map(fmt_dollars)
         ranked_display["Cost after action"] = ranked_display["Cost after action"].map(fmt_dollars)
         ranked_display["Crash cost est."] = ranked_display["Crash cost est."].map(fmt_dollars)
@@ -547,15 +709,15 @@ try:
     df_cost_forecast_2026_per_crash = pd.read_csv(CSV_PATH4)
 except Exception as e:
     st.error(f"Forecasting per crash dataset load failed: {e}")
-    st.stop()   
+    st.stop()    
 
 try:
     df_crash_forecast_2026 = pd.read_csv(CSV_PATH5)
 except Exception as e:
     st.error(f"Forecasting crash count dataset load failed: {e}")
-    st.stop()   
+    st.stop()    
 
-# --- SIDEBAR ---
+# --- SIDEBAR (Logo Removed from here) ---
 with st.sidebar:
     st.title("Global Filters")
     all_years = sorted(df_raw1["Year"].dropna().unique().astype(int))
@@ -601,7 +763,7 @@ with tab1:
     
     with shap_output:
         st.write("#### Top Predictors of Estimated Cost")
-        st.info("The visual below shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model.")
+        st.info("The visual below shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. This SHAP summary plot shows how each feature influences the model's predicted crash cost relative to the average.  \n\n Features are ranked by importance (top = most impactful). Each dot represents an individual crash — red dots indicate a high feature value, blue dots indicate a low feature value.  \n\n Dots to the right of center (positive SHAP) mean that feature increased the predicted cost; dots to the left (negative SHAP) mean it decreased the predicted cost.")
         st.image("data/processed/outputs/BI to AI SHAP vf.png", width=1200)
     
     with historicaloverview:
@@ -614,7 +776,7 @@ with tab1:
         fig_cost_bar.update_layout(
             height=400, 
             width=800,
-            margin=dict(l=100, r=100, t=20, b=20),
+            margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
             yaxis_tickprefix='$'
             )
         avg_annual_cost_ref= df_total_cost["Estimated Total Comprehensive Cost"].mean()
@@ -624,100 +786,603 @@ with tab1:
             line_dash="dash",
             line_color="red",
             annotation_text=f"Average Annual Cost: ${avg_annual_cost_ref:,.0f}",
-            annotation_position="top left"
-            )
-        st.plotly_chart(fig_cost_bar, use_container_width=True)
+            annotation_position="bottom right"
+        )
+        fig_cost_bar.update_xaxes(type='category')
+        fig_cost_bar.update_traces(marker_color='#5236ab')
+        st.plotly_chart(fig_cost_bar)
 
         st.write("**Total Number of Crashes per Year**")
-        df_crash_volume= df.groupby("Year").size().reset_index(name="Crash Count")
-        fig_crash_volume= px.bar(df_crash_volume, x="Year", y="Crash Count", text_auto=True)
-        fig_crash_volume.update_layout(
+        df_crash_count= df.groupby("Year")["ID"].count().reset_index()
+        df_crash_count.columns = ["Year", "Number of Crashes"]
+        fig_crash_count= px.bar(df_crash_count, x="Year", y="Number of Crashes", text_auto=".2s")
+        fig_crash_count.update_layout(
             height=400, 
             width=800,
-            margin=dict(l=100, r=100, t=20, b=20)
+            margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
             )
-        st.plotly_chart(fig_crash_volume, use_container_width=True)
+        fig_crash_count.update_xaxes(type='category')
+        fig_crash_count.update_traces(marker_color='#5236ab')
+        st.plotly_chart(fig_crash_count)
 
 with tab2:
-    st.subheader("Geographic Risk Distribution")
-    st.info("""
-        **💡High-Level Insights:**
-        - **Concentrated Risk:** High-density crash clusters are primarily localized along major highways (I-35 and MoPac) and high-speed arterial corridors.
-        - **Corridor Vulnerability:** While urban centers show high crash volume, peripheral corridors often exhibit higher severity per incident due to increased speed limits.
-        - **Geospatial Outliers:** Specific intersections consistently account for a disproportionate percentage of the total economic impact within the selected corridor.
-    """)
-    st.pydeck_chart(pdk.Deck(
-        map_style='mapbox://styles/mapbox/light-v9',
-        initial_view_state=pdk.ViewState(
-            latitude=df["latitude"].mean(),
-            longitude=df["longitude"].mean(),
+    col_list, col_map = st.columns([1, 2])   
+    with col_list:
+        st.subheader("🔥 Top 10 Risk Corridors")      
+        # Data Processing
+        risk_df = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).reset_index()
+        risk_df.columns = ["Street", "Cost"]        
+        # Color Logic
+        bar_colors = ["#4B0082" if s == selected_street else "#D8BFD8" for s in risk_df["Street"]]        
+        # Create Figure
+        fig_bar = px.bar(
+            risk_df, 
+            x="Cost", 
+            y="Street", 
+            orientation="h", 
+            template="plotly_white"
+        )       
+        # Update Traces and Axis Formatting
+        fig_bar.update_traces(marker_color=bar_colors)
+        
+        fig_bar.update_layout(
+            xaxis_title="Cost",
+            yaxis_title="Street",
+            xaxis=dict(
+                tickprefix="$", 
+                tickformat=",d"  # Adds commas for thousands (e.g., $1,000)
+            )
+        )      
+        # Adjust Y-axis to ensure the bars are sorted correctly (highest at top)
+        fig_bar.update_yaxes(autorange="reversed")
+        
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+with col_map:
+    severity_color_map = {
+        'Fatal': '#991f3d',
+        'Serious Injury': '#e31937',
+        'Minor Injury': '#ff6a00',
+        'Possible Injury': '#f1a425',
+        'No Injury': '#128354',
+        'Unknown': '#cccccc'
+    }
+    
+    map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
+    lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
+
+    if map_type == "Economic Heatmap":
+        fig_m = px.density_mapbox(
+            df,
+            lat="latitude",
+            lon="longitude",
+            z="Estimated Total Comprehensive Cost",
+            radius=12,
+            center=dict(lat=lat_c, lon=lon_c),
             zoom=10,
-            pitch=45,
-        ),
-        layers=[
-            pdk.Layer(
-                'HeatmapLayer',
-                data=df,
-                get_position='[longitude, latitude]',
-                get_weight="tot_injry_cnt",
-                radius_pixels=60,
-            ),
-        ],
-    ))
+            mapbox_style="open-street-map",
+            color_continuous_scale="Purples",           
+        )
+        # Update the colorbar to show currency
+        fig_m.update_layout(
+            coloraxis_colorbar=dict(
+                title="Total Comprehensive Cost",
+                tickprefix="$",
+                tickformat=",d" # Adds commas for thousands
+            )
+        )
+    else:
+        # We set the order from least serious to most serious. 
+        # Plotly draws these in order, so 'Fatal' (the last one) will be layered on top.
+        layer_order = ["Unknown", "No Injury", "Possible Injury", "Minor Injury", "Serious Injury", "Fatal"]
+        
+        fig_m = px.scatter_mapbox(
+            df,
+            lat="latitude",
+            lon="longitude",
+            color="Severity_Label",
+            color_discrete_map=severity_color_map,
+            category_orders={"Severity_Label": layer_order},
+            labels={"Severity_Label": "Severity Label"},
+            size="marker_size",
+            center=dict(lat=lat_c, lon=lon_c),
+            zoom=10,
+            mapbox_style="open-street-map",
+        )
+        
+        # This ensures the legend still shows 'Fatal' at the top, even though it's drawn last
+        fig_m.update_layout(
+            legend=dict(
+                traceorder="reversed",
+                title_font_family="Arial",
+                font=dict(size=12)
+            )
+        )
+
+    fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
+    st.plotly_chart(fig_m, use_container_width=True)
 
 with tab3:
-    st.subheader("Speed Limits and Crash Severity")
+    st.subheader(f"🛡️ Impact of Speed Limit: {current_focus}")
     st.info("""
         **💡High-Level Insights:**
-        - **The Speed Threshold:** Crashes in zones with speed limits of **50+ MPH** result in exponentially higher comprehensive costs compared to urban 30 MPH zones.
-        - **Severity Correlation:** Fatalities are significantly more likely to occur on roads categorized with higher speed bins, confirming speed as a primary severity driver.
+        - Most crashes result in **severe** or **minor** injuries.
+        - The largest number of crashes occur when the speed limit is **30-40 mph**.
+        - The largest number of crashes resulting in severe injuries or fatalities occur when the speed limit is **30-40 mph**.
+        - The most expensive accidents occur when the speed limit is **50-60 mph**.
     """)
-    fig_speed = px.box(df, x="Speed_Bin", y="Estimated Total Comprehensive Cost", color="Severity_Label", 
-                      title="Cost Distribution by Speed Limit Bin")
-    st.plotly_chart(fig_speed, use_container_width=True)
+
+    r1c1, r1c2= st.columns([1, 2], gap="large")
+
+    with r1c1:
+        st.write("#### Crash Severity Breakdown")
+        severity_color_map = {
+            'Fatal': '#991f3d',
+            'Serious Injury': '#e31937',
+            'Minor Injury': '#ff6a00',
+            'Possible Injury': '#f1a425',
+            'No Injury': '#128354',
+            'Unknown': '#cccccc'
+        }
+        fig_pie = px.pie(
+            df, 
+            names="Severity_Label", 
+            hole=0.4, 
+            color="Severity_Label", 
+            color_discrete_map=severity_color_map, 
+            category_orders={"Severity_Label": ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]},
+            labels={"Severity_Label": "Severity Label"}
+        )
+        fig_pie.update_layout(
+            height=575,
+            margin=dict(t=60),
+            legend_title_text='Severity Label',
+            legend=dict(
+                orientation="h",
+                yanchor="top",
+                y=1.25,
+                xanchor="center",
+                x=0.5
+            )
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)    
+
+    with r1c2: 
+        st.write("#### Crash Severity vs. Average Estimated Cost by Speed Limit")
+        #Cost and severity by speed
+        df_avg_cost = df.groupby(["Speed_Bin"], observed=False)["Estimated Total Comprehensive Cost"].mean().reset_index()
+        df_severity = df.groupby(["Speed_Bin", "Severity_Label"], observed=False).size().reset_index(name="Accident_Count")
+        # Create figure with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        #Add the Stacked Bars (Primary Y-Axis)
+        severity_order = ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]
+        for severity in severity_order:
+            mask = df_severity["Severity_Label"] == severity
+            fig.add_trace(
+                go.Bar(
+                    x=df_severity[mask]["Speed_Bin"],
+                    y=df_severity[mask]["Accident_Count"],
+                    name=severity,
+                    marker_color=severity_color_map.get(severity, '#cccccc'),
+                    hovertemplate=f"<b>{severity}</b>: %{{y}} crashes<extra></extra>"
+                ),
+                secondary_y=False,
+            )
+        #Add the Average Cost Line (Secondary Y-Axis)
+        fig.add_trace(
+            go.Scatter(
+                x=df_avg_cost["Speed_Bin"],
+                y=df_avg_cost["Estimated Total Comprehensive Cost"],
+                name="Avg Cost ($)",
+                mode='lines+markers',
+                line=dict(color='#5236ab', width=4),
+                marker=dict(size=8),
+                hovertemplate="<b>Avg Cost:</b> $%{y:,.2f}<extra></extra>"
+            ),
+            secondary_y=True,
+        )
+        fig.update_layout(
+            barmode='stack',
+            margin=dict(t=50),
+            hovermode="x unified", # Shows both cost and count in one tooltip
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            height=600,
+            xaxis_title="Speed Limit (mph)"
+        )
+        fig.update_yaxes(title_text="Number of Crashes", secondary_y=False)
+        fig.update_yaxes(title_text="Average Estimated Cost ($)", secondary_y=True, tickprefix="$")
+        st.plotly_chart(fig, use_container_width=True)    
 
 with tab4:
-    st.subheader("Temporal Patterns")
+    st.subheader(f"Temporal Patterns: {current_focus}")
+    st.write("""The visuals on this page shows the number of crashes that occurred during different timeframes as well the average estimated cost and the severity of those crashes.""")
     st.info("""
-        **💡High-Level Insights:**
-        - **Peak Risk Windows:** Crash volume peaks during morning and evening rush hours (7-9 AM, 4-6 PM), but **economic impact** often spikes during late-night hours due to increased severity.
-        - **Weekend Trends:** Saturday and Sunday nights show a distinct pattern of high-cost incidents, likely correlated with lower visibility and potential impairment.
-    """)
-    temp_df = df.groupby(["DAY_NAME", "hour_label"])["Estimated Total Comprehensive Cost"].mean().reset_index()
-    fig_temp = px.line(temp_df, x="hour_label", y="Estimated Total Comprehensive Cost", color="DAY_NAME",
-                      title="Average Crash Cost by Time of Day")
-    st.plotly_chart(fig_temp, use_container_width=True)
+            **💡High-Level Insights:**
+            - Most crashes occur during Monday-Friday from **3 PM** - **6 PM**.
+            - The most expensive crashes occur at **6 AM** and **8 PM**.
+            - The most severe crashes (those with serious or fatal injuries) occur from **3 PM** - **5 PM**.
+            
+            *Recommendation: Deploying additional resources during afternoon rush hour. Targeting solutions for pedestrian-related accidents from **6 PM** - **9 PM** and solutions for speed-related accidents from **5 AM**- **7 AM**.*
+            *See the prescriptive actions tab for specific solutions.*
+        """)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    #Density Heatmap for Number of Crashes for Day of Week and Time Frame
+    st.write("#### Density Heatmap for Number of Crashes by Day and Time Frame")
+    st.info("The visual below shows the number of crashes each day of the week in 3 hour timeframes. The darker the shade of purple, the more crashes that occurred during that timeframe.")
+    heat_df = df.groupby(["DAY_NAME", "HOUR"]).size().reset_index(name="Count")
+    fig_heat = px.density_heatmap(
+        heat_df,
+        x="HOUR",
+        y="DAY_NAME",
+        z="Count",
+        labels={"DAY_NAME": "Day", "HOUR": "Hour", "Count": "Number of Crashes"},
+        color_continuous_scale="Purples",
+        category_orders={"DAY_NAME": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]},
+    )
+    fig_heat.update_traces(
+        xbins=dict(start=0, end=24, size=3),
+        autobinx=False,
+        hovertemplate=(
+        "<b>Number of Crashes:</b> %{z}<extra></extra>"
+        )
+    )
+    tick_vals = [0, 3, 6, 9, 12, 15, 18, 21]
+    tick_text = ["12 AM", "3 AM", "6 AM", "9 AM", "12 PM", "3 PM", "6 PM", "9 PM"]
+    fig_heat.update_layout(
+        xaxis = dict(
+            tickmode = 'array',
+            tickvals = tick_vals,
+            ticktext = tick_text
+        )
+    )
+    fig_heat.update_layout(
+    coloraxis_colorbar=dict(
+        title="Number of Crashes"
+        )
+    )   
+    st.plotly_chart(fig_heat, use_container_width=True)
+
+    #Crash Severity vs. Average Estimated Costs
+    st.write("#### Crash Severity vs. Average Estimated Cost")
+    df_avg_cost = df.groupby(["hour_label"], observed=False)["Estimated Total Comprehensive Cost"].mean().reset_index()
+    df_severity = df.groupby(["hour_label", "Severity_Label"], observed=False).size().reset_index(name="Accident_Count")
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    #Add the Stacked Bars (Primary Y-Axis)
+    severity_order = ["Fatal", "Serious Injury", "Minor Injury", "Possible Injury", "No Injury", "Unknown"]
+    for severity in severity_order:
+        mask = df_severity["Severity_Label"] == severity
+        fig.add_trace(
+            go.Bar(
+                x=df_severity[mask]["hour_label"],
+                y=df_severity[mask]["Accident_Count"],
+                name=severity,
+                marker_color=severity_color_map.get(severity, '#cccccc'),
+                hovertemplate=f"<b>{severity}</b>: %{{y}} crashes<extra></extra>"
+            ),
+            secondary_y=False,
+        )
+    #Add the Average Cost Line (Secondary Y-Axis)
+    fig.add_trace(
+        go.Scatter(
+            x=df_avg_cost["hour_label"],
+            y=df_avg_cost["Estimated Total Comprehensive Cost"],
+            name="Avg Cost ($)",
+            mode='lines+markers',
+            line=dict(color='#5236ab', width=4),
+            marker=dict(size=8),
+            hovertemplate="<b>Avg Cost:</b> $%{y:,.2f}<extra></extra>"
+        ),
+        secondary_y=True,
+    )
+    fig.update_layout(
+        barmode='stack',
+        hovermode="x unified", # Shows both cost and count in one tooltip
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        height=600
+    )
+    fig.update_yaxes(title_text="Number of Crashes", secondary_y=False)
+    fig.update_yaxes(title_text="Average Estimated Cost ($)", secondary_y=True, tickprefix="$")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+    #Explanatory Charts for Spikes in Average Cost 
+    st.text("The spikes in the average estimated total cost can be explained by pedestrian-involvement in the crash, higher average speed limits, and outliers in the data. The visuals below show these patterns. The first visual shows which hours have the most crashes with pedestrians involved. The second visual shows the average speed limit by hour. The spike in average cost for crashes at 1 AM is due to outliers in the data. Most crashes that occur between 1 AM and 2 AM fall in the average cost range of $20k - $70k, but there were some exceptionally costly crashes that drove up the average cost.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.write("#### Explanatory Visuals for Spikes in Average Cost")
+    #Number of Crashes Involving Pedestrians by Hour
+    df_pedestrian = df[df['pedestrian_involved'] == True]
+    df_ped_hour = df_pedestrian.groupby("hour_label", observed=False).size().reset_index(name="Pedestrian_Crash_Count")
+    fig_ped = px.bar(
+        df_ped_hour, 
+        x="hour_label", 
+        y="Pedestrian_Crash_Count",
+        title="Pedestrian-Involved Crashes by Hour",
+        labels={"hour_label": "Hour", "Pedestrian_Crash_Count": "Number of Crashes"},
+        text_auto=True # Shows the count number on top of each bar
+    )
+    fig_ped.update_traces(marker_color='#5236ab')
+    st.plotly_chart(fig_ped, use_container_width=True) 
+
+
+    #Average Crash Speed Limit by Hour
+    df_avg_speed = df.groupby("hour_label", observed=False)["crash_speed_limit"].mean().reset_index()
+    fig_speed = px.line(
+        df_avg_speed, 
+        x="hour_label", 
+        y="crash_speed_limit",
+        title="Average Speed Limit of Crashes by Hour",
+        markers=True, # Adds dots to each hour for better readability
+        labels={"hour_label": "Hour of Day", "crash_speed_limit": "Avg Speed Limit (MPH)"},
+        template="plotly_white"
+    )
+    fig_speed.update_traces(
+        line=dict(color='#5236ab', width=3),
+        marker=dict(size=8)
+    )
+    fig_speed.update_yaxes(ticksuffix=" MPH")
+    st.plotly_chart(fig_speed, use_container_width=True)
 
 with tab5:
-    st.subheader("Transportation Mode Analysis")
-    st.info("""
-        **💡High-Level Insights:**
-        - **Vulnerable Road Users:** Pedestrian and motorcycle-involved crashes account for only a small fraction of total volume but over **40% of total economic impact**.
-        - **Mode Disparity:** While passenger cars represent the highest total volume, the cost per incident for micromobility and bicycles is rising in specific urban sectors.
-        - **Commercial Impact:** Commercial vehicle crashes, though less frequent, result in significant corridor delays and high secondary economic costs.
+    st.subheader(f"📊 Economic Impact by Transportation Type: {current_focus}")
+    st.write("""
+        This analysis breaks down the economic burden of crashes based on the modes of transportation involved. 
+        **Comprehensive Cost** includes medical expenses, lost productivity, property damage, and the monetized value of pain and suffering.
     """)
-    modes = ["Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", "Commercial Veh"]
-    mode_sums = [df[m].sum() for m in modes]
-    fig_modes = px.pie(values=mode_sums, names=modes, title="Volume by Transportation Mode")
-    st.plotly_chart(fig_modes, use_container_width=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # 1. Define all modes including the new ones from the data pipeline
+    modes = [
+        "Passenger Car", "Bicycle", "Pedestrian", "Motorcycle", 
+        "Commercial Veh", "Micromobility", "E-Scooter", 
+        "Large Passenger Veh", "Train", "Motor Vehicle", "Other"
+    ]
+    
+    mode_stats = []
+
+    # 2. Calculate statistics for each mode
+    for m in modes:
+        if m in df.columns:
+            subset = df[df[m] == 1]
+            if not subset.empty:
+                avg_cost = subset["Estimated Total Comprehensive Cost"].mean()
+                total_impact = subset["Estimated Total Comprehensive Cost"].sum()
+                mode_stats.append({
+                    "Transportation Mode": m, 
+                    "Average Cost per Accident": avg_cost, 
+                    "Total Economic Burden": total_impact, 
+                    "Number of Accidents": len(subset)
+                })
+
+    if mode_stats:
+        mode_df = pd.DataFrame(mode_stats).sort_values("Average Cost per Accident", ascending=False)
+
+        # 3. Summary Metrics for "Additional Helpful Information"
+        top_mode = mode_df.iloc[0]
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Highest Avg Cost Mode", top_mode["Transportation Mode"])
+        m2.metric("Avg Cost (Highest)", f"${top_mode['Average Cost per Accident']:,.0f}")
+        m3.metric("Total Modes of Transportation Analyzed", len(mode_df))
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # 4. Average Economic Cost Bar Chart (Spaced out full-width)
+        st.write("#### 💰 Average Economic Cost per Accident")
+        st.info("This chart identifies which types of accidents are the most 'expensive' on average, often highlighting the severity of incidents involving vulnerable road users.")
+        
+        fig_avg = px.bar(
+            mode_df, 
+            x="Transportation Mode", 
+            y="Average Cost per Accident", 
+            text_auto=".2s",
+            template="plotly_white",
+            labels={"Average Cost per Accident": "Average Cost ($)"}
+        )
+        fig_avg.update_traces(marker_color='#5236ab', textposition="outside")
+        fig_avg.update_layout(
+            yaxis_tickprefix='$',
+            yaxis_tickformat=',.0f',
+            xaxis_title=None,
+            height=500
+        )
+        st.plotly_chart(fig_avg, use_container_width=True)
+
+        st.markdown("---")
+
+        # 5. Enhanced Bubble Chart (Vulnerability Matrix)
+        st.write("#### 🎯 Mode Vulnerability Matrix")
+        st.info("""
+            **How to read this chart:**
+            - **X-Axis (Horizontal):** Higher numbers mean these accidents happen more frequently.
+            - **Y-Axis (Vertical):** Higher positions mean these accidents are more severe/costly per incident.
+            - **Bubble Size:** Represents the **Total Economic Burden** (the sum of all costs for that mode).
+            
+            *Target the top-left for high-severity/low-volume risks and the bottom-right for high-volume systemic issues.*
+        """)
+
+        fig_bubble = px.scatter(
+            mode_df, 
+            x="Number of Accidents", 
+            y="Average Cost per Accident", 
+            size="Total Economic Burden",
+            color="Transportation Mode", 
+            hover_name="Transportation Mode",
+            size_max=60,
+            template="plotly_white",
+            labels={
+                "Number of Accidents": "Total Number of Accidents",
+                "Average Cost per Accident": "Average Cost per Incident ($)",
+                "Total Economic Burden": "Total Economic Impact ($)"
+            }
+        )
+        
+        fig_bubble.update_layout(
+            yaxis_tickprefix='$',
+            yaxis_tickformat=',.0f',
+            xaxis_tickformat=',d',
+            legend_title="Mode",
+            height=600,
+            hovermode="closest"
+        )
+        
+        # Add a reference line for average across all modes
+        avg_all = mode_df["Average Cost per Accident"].mean()
+        fig_bubble.add_hline(y=avg_all, line_dash="dot", annotation_text="Mean Avg Cost", annotation_position="bottom right")
+        
+        st.plotly_chart(fig_bubble, use_container_width=True)
+        
+    else:
+        st.warning("No Mode-specific data found in the current selection.")
 
 with tab6:
-    st.subheader("Prescriptive Actions")
+    st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
+    st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
+    
     if df_prescriptive_raw is not None:
-        df_p = prepare_prescriptive_df(df_prescriptive_raw)
-        build_map(df_p)
-        action_bars(df_p)
-        ranked_table_and_details(df_p, 50)
-    else:
-        st.warning("Prescriptive data not available.")
+        dfp = prepare_prescriptive_df(df_prescriptive_raw)
+        if selected_street != "All Corridors":
+            dfp = dfp[dfp["address_short"].str.contains(selected_street, case=False, na=False)]
+        all_actions = sorted(dfp["best_action"].dropna().unique().tolist())
+        all_action_labels = [pretty_action(a) for a in all_actions]  # (used implicitly by build_map)
+        
+        # top layout: filters + KPIs
+        colL, colR = st.columns([3, 2], gap="large")
 
-with tab7:
-    st.subheader("2026 Monthly Forecast")
-    st.write("Projected Economic Impact and Crash Volume for the next fiscal year.")
-    col_f1, col_f2 = st.columns(2)
-    with col_f1:
-        fig_f1 = px.line(df_cost_forecast_2026, x="Month", y="Projected_Cost", title="2026 Cost Forecast")
-        st.plotly_chart(fig_f1, use_container_width=True)
-    with col_f2:
-        fig_f2 = px.line(df_crash_forecast_2026, x="Month", y="Projected_Crashes", title="2026 Volume Forecast")
-        st.plotly_chart(fig_f2, use_container_width=True)
+        with colL:
+            st.markdown('<div class="left-panel sticky-col">', unsafe_allow_html=True)
+    
+            selected_actions = st.multiselect(
+                "Recommended action",
+                options=all_actions,
+                default=all_actions,
+                format_func=pretty_action,
+                key="presc_actions"
+            )
+    
+            top_n = st.slider(
+                "Top N locations",
+                min_value=10,
+                max_value=300,
+                value=50,
+                step=10,
+                key="presc_topn"
+            )
+    
+            with st.expander("More filters"):
+                if "severity" in dfp.columns:
+                    sevs = sorted(dfp["severity"].dropna().unique().tolist())
+                    st.multiselect("Severity", sevs, key="presc_severity")
+    
+                if "district" in dfp.columns:
+                    dists = sorted(dfp["district"].dropna().unique().tolist())
+                    st.multiselect("District", dists, key="presc_district")
+    
+            st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
+    
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            dfp_f = dfp[dfp["best_action"].isin(st.session_state.get("presc_actions", all_actions))].copy()
+        
+            if st.session_state.get("presc_severity"):
+                if "severity" in dfp_f.columns:
+                    dfp_f = dfp_f[dfp_f["severity"].isin(st.session_state["presc_severity"])]
+        
+            if st.session_state.get("presc_district"):
+                if "district" in dfp_f.columns:
+                    dfp_f = dfp_f[dfp_f["district"].isin(st.session_state["presc_district"])]
+        
+            if dfp_f.empty:
+                st.warning("No data matches your filters. Select more options.")
+                st.markdown('</div>', unsafe_allow_html=True)
+                st.stop()
+        
+            df_topn = (
+                dfp_f.sort_values("expected_reduction_amount", ascending=False)
+                .head(st.session_state["presc_topn"])
+            )
+        with colR:
+            # KPI 1 — total expected reduction
+            total_reduction = float(df_topn["expected_reduction_amount"].sum())
+    
+            # KPI 2 — median pct reduction
+            if "pct_reduction" in df_topn.columns:
+                pct_series = df_topn["pct_reduction"]
+                if pct_series.max() > 1.0:
+                    pct_series = pct_series / 100.0
+                median_pct_display = f"{float(pct_series.median()):.1%}"
+            else:
+                median_pct_display = "—"
+    
+            # KPI 3 — number of top-N locations
+            locations_display = f"{len(df_topn):,}"
+           
+            with st.container():
+                st.metric("Total Expected Reduction", f"${total_reduction:,.0f}")
+                st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
+            
+                st.metric("Median % Reduction", median_pct_display)
+                st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
+            
+                st.metric("Locations in Scope", locations_display)
+
+            # end top layout
+    
+        selected_action_labels = [pretty_action(a) for a in st.session_state.get("presc_actions", all_actions)]
+        # build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=st.session_state.get("presc_actions", all_actions))
+        build_map(dfp_f, top_n=st.session_state["presc_topn"])
+        # build_map(dfp_f, top_n=st.session_state["presc_topn"], all_actions=all_actions)
+        action_bars(dfp_f, top_n=st.session_state["presc_topn"])
+        ranked_table_and_details(dfp_f, top_n=st.session_state["presc_topn"])
+    else:
+        st.error("Prescriptive data unavailable.")
+
+
+with tab7:  
+    st.subheader(f"2026 Monthly Forecast")
+    st.write("""
+        This analysis shows the monthly estimated cost for 2026. The forecasted cost was calculated by multiplying a predicted total number of crash per month by the predicted average cost per crash each month. 
+        The total number of crashes in a month was predicted using an ARIMA model to account for seasonality. The average cost per crash per month was predicted using our random forest model.
+    """)
+
+    forecasted_total_cost_2026= df_cost_forecast_2026["total_predicted_cost"].sum()
+    forecasted_crash_count_2026= df_crash_forecast_2026["forecasted_crash_count"].sum()
+
+    st.info(f"""
+        **💡High-Level Insights:**
+        - The forecasted total cost for 2026 is **${forecasted_total_cost_2026:,.2f}**.
+        - The forecasted total number of crashes in 2026 is **{forecasted_crash_count_2026:,}**.
+        - **February** has the highest forecasted cost and number of crashes. 
+        - **January** has the lowest forecasted cost and number of crashes. 
+    """)
+
+    #Monthly total cost forecast
+    st.write("#### Forecasted Total Cost per Month")
+    df_monthly_crash_total_cost= df_cost_forecast_2026[['month','total_predicted_cost']]
+    fig_monthly_crash_total_cost= px.bar(df_monthly_crash_total_cost, x="month", y="total_predicted_cost", text_auto=".2s")
+    fig_monthly_crash_total_cost.update_layout(
+        height=400, 
+        width=800,
+        margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
+        yaxis_tickprefix='$'
+    )
+    fig_monthly_crash_total_cost.update_xaxes(title_text="Month", type='category')
+    fig_monthly_crash_total_cost.update_yaxes(title_text="Total Predicted Cost")
+    fig_monthly_crash_total_cost.update_traces(marker_color='#5236ab')
+    st.plotly_chart(fig_monthly_crash_total_cost)  
+
+    #Monthly Count Forecast
+    st.write("#### Forecasted Number of Crashes per Month")
+    fig_forecasted_crash_count= px.bar(df_crash_forecast_2026, x="month", y="forecasted_crash_count", text_auto=".2s")
+    fig_forecasted_crash_count.update_layout(
+        height=400, 
+        width=800,
+        margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+        )
+    fig_forecasted_crash_count.update_xaxes(title_text="Month", type='category')
+    fig_forecasted_crash_count.update_yaxes(title_text="Forecasted Crash Count")
+    fig_forecasted_crash_count.update_traces(marker_color='#5236ab')
+    st.plotly_chart(fig_forecasted_crash_count)
