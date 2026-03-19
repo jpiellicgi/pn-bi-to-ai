@@ -693,11 +693,11 @@ try:
 except Exception as e:
     df_prescriptive_raw = None
 
-# try:
-#     df_cost_forecast_2026 = load_partner_data(CSV_PATH3)
-# except Exception as e:
-#     st.error(f"Forecasting dataset load failed: {e}")
-#     st.stop()   
+try:
+    df_cost_forecast_2026 = pd.read_csv(CSV_PATH3)
+except Exception as e:
+    st.error(f"Forecasting dataset load failed: {e}")
+    st.stop()   
 
 # --- SIDEBAR (Logo Removed from here) ---
 with st.sidebar:
@@ -1345,7 +1345,7 @@ with tab7:
         The total number of crashes in a month was predicted using an ARIMA model to account for seasonality. The average cost per crash per month was predicted using our random forest model.
     """)     
 
-    # df_monthly_crash_total_cost= df_cost_forecast_2026[['month','total_predicted_cost']]
-    # fig_monthly_crash_total_cost= px.bar(df_monthly_crash_total_cost, x="month", y="total_predicted_cost", text_auto=".2s")
-    # fig_monthly_crash_total_cost.update_traces(marker_color='#5236ab')
-    # st.plotly_chart(fig_monthly_crash_total_cost)  
+    df_monthly_crash_total_cost= df_cost_forecast_2026[['month','total_predicted_cost']]
+    fig_monthly_crash_total_cost= px.bar(df_monthly_crash_total_cost, x="month", y="total_predicted_cost", text_auto=".2s")
+    fig_monthly_crash_total_cost.update_traces(marker_color='#5236ab')
+    st.plotly_chart(fig_monthly_crash_total_cost)  
