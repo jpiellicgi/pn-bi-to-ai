@@ -806,9 +806,20 @@ with tab1:
         st.plotly_chart(fig_crash_count)
 
 with tab2:
-    col_list, col_map = st.columns([1, 2])   
+    st.subheader("Geographic Risk Distribution")
+    
+    # --- ADDED: High Level Insights ---
+    st.info("""
+        **💡 High-Level Insights:**
+        - **Corridor Concentration:** A small number of major corridors (e.g., IH 35, Mopac, and Lamar Blvd) consistently account for the majority of the district's economic loss.
+        - **Severity Hotspots:** While "No Injury" incidents are widespread, "Fatal" and "Serious Injury" clusters are highly localized, often correlating with high-speed transitions or major intersection nodes.
+        - **Economic Impact:** The Purple Heatmap highlights that geographic "volume" doesn't always equal "value"—certain areas with fewer crashes have a higher density of color due to the extreme comprehensive costs of those specific incidents.
+    """)
+    # ----------------------------------
+
+    col_list, col_map = st.columns([1, 2])    
     with col_list:
-        st.subheader("🔥 Top 10 Risk Corridors")      
+        st.subheader("🔥 Top 10 Risk Corridors")       
         # Data Processing
         risk_df = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).reset_index()
         risk_df.columns = ["Street", "Cost"]        
@@ -821,7 +832,7 @@ with tab2:
             y="Street", 
             orientation="h", 
             template="plotly_white"
-        )       
+        )        
         # Update Traces and Axis Formatting
         fig_bar.update_traces(marker_color=bar_colors)
         
@@ -838,70 +849,70 @@ with tab2:
         
         st.plotly_chart(fig_bar, use_container_width=True)
 
-with col_map:
-    severity_color_map = {
-        'Fatal': '#991f3d',
-        'Serious Injury': '#e31937',
-        'Minor Injury': '#ff6a00',
-        'Possible Injury': '#f1a425',
-        'No Injury': '#128354',
-        'Unknown': '#cccccc'
-    }
-    
-    map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
-    lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
-
-    if map_type == "Economic Heatmap":
-        fig_m = px.density_mapbox(
-            df,
-            lat="latitude",
-            lon="longitude",
-            z="Estimated Total Comprehensive Cost",
-            radius=12,
-            center=dict(lat=lat_c, lon=lon_c),
-            zoom=10,
-            mapbox_style="open-street-map",
-            color_continuous_scale="Purples",           
-        )
-        # Update the colorbar to show currency
-        fig_m.update_layout(
-            coloraxis_colorbar=dict(
-                title="Total Comprehensive Cost",
-                tickprefix="$",
-                tickformat=",d" # Adds commas for thousands
-            )
-        )
-    else:
-        # We set the order from least serious to most serious. 
-        # Plotly draws these in order, so 'Fatal' (the last one) will be layered on top.
-        layer_order = ["Unknown", "No Injury", "Possible Injury", "Minor Injury", "Serious Injury", "Fatal"]
+    with col_map:
+        severity_color_map = {
+            'Fatal': '#991f3d',
+            'Serious Injury': '#e31937',
+            'Minor Injury': '#ff6a00',
+            'Possible Injury': '#f1a425',
+            'No Injury': '#128354',
+            'Unknown': '#cccccc'
+        }
         
-        fig_m = px.scatter_mapbox(
-            df,
-            lat="latitude",
-            lon="longitude",
-            color="Severity_Label",
-            color_discrete_map=severity_color_map,
-            category_orders={"Severity_Label": layer_order},
-            labels={"Severity_Label": "Severity Label"},
-            size="marker_size",
-            center=dict(lat=lat_c, lon=lon_c),
-            zoom=10,
-            mapbox_style="open-street-map",
-        )
-        
-        # This ensures the legend still shows 'Fatal' at the top, even though it's drawn last
-        fig_m.update_layout(
-            legend=dict(
-                traceorder="reversed",
-                title_font_family="Arial",
-                font=dict(size=12)
+        map_type = st.radio("Map Layer:", ["Economic Heatmap", "Incident Clusters"], horizontal=True)
+        lat_c, lon_c = (df["latitude"].median(), df["longitude"].median()) if not df.empty else (30.2672, -97.7431)
+
+        if map_type == "Economic Heatmap":
+            fig_m = px.density_mapbox(
+                df,
+                lat="latitude",
+                lon="longitude",
+                z="Estimated Total Comprehensive Cost",
+                radius=12,
+                center=dict(lat=lat_c, lon=lon_c),
+                zoom=10,
+                mapbox_style="open-street-map",
+                color_continuous_scale="Purples",            
             )
-        )
+            # Update the colorbar to show currency
+            fig_m.update_layout(
+                coloraxis_colorbar=dict(
+                    title="Total Comprehensive Cost",
+                    tickprefix="$",
+                    tickformat=",d" # Adds commas for thousands
+                )
+            )
+        else:
+            # We set the order from least serious to most serious. 
+            # Plotly draws these in order, so 'Fatal' (the last one) will be layered on top.
+            layer_order = ["Unknown", "No Injury", "Possible Injury", "Minor Injury", "Serious Injury", "Fatal"]
+            
+            fig_m = px.scatter_mapbox(
+                df,
+                lat="latitude",
+                lon="longitude",
+                color="Severity_Label",
+                color_discrete_map=severity_color_map,
+                category_orders={"Severity_Label": layer_order},
+                labels={"Severity_Label": "Severity Label"},
+                size="marker_size",
+                center=dict(lat=lat_c, lon=lon_c),
+                zoom=10,
+                mapbox_style="open-street-map",
+            )
+            
+            # This ensures the legend still shows 'Fatal' at the top, even though it's drawn last
+            fig_m.update_layout(
+                legend=dict(
+                    traceorder="reversed",
+                    title_font_family="Arial",
+                    font=dict(size=12)
+                )
+            )
 
-    fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
-    st.plotly_chart(fig_m, use_container_width=True)
-
+        fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
+        st.plotly_chart(fig_m, use_container_width=True)
+        
 with tab3:
     st.subheader(f"🛡️ Impact of Speed Limit: {current_focus}")
     st.info("""
