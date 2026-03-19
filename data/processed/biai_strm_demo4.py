@@ -725,6 +725,24 @@ with st.sidebar:
     top_10_names = df_raw1.groupby("rpt_street_name")["Estimated Total Comprehensive Cost"].sum().nlargest(10).index.tolist()
     selected_street = st.selectbox("📍 Corridor:", ["All Corridors"] + top_10_names)
     corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
+    
+    st.header("Chatbot 🤖")
+    if "messages" not in st.session_state:
+            st.session_state.messages = []    
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]):
+            st.write(m["content"])    
+    user_input = st.chat_input("Ask me something...")
+    
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.write(user_input)
+
+        response = f"You said: {user_input}"
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"):
+            st.write(response)
 
 # Filter Logic
 df = df_raw1[df_raw1["Year"].isin(selected_years)]
