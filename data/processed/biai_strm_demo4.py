@@ -1139,6 +1139,16 @@ with tab4:
 
 with tab5:
     st.subheader(f"📊 Economic Impact by Transportation Type: {current_focus}")
+    
+    # --- ADDED: High Level Insights ---
+    st.info("""
+        **💡 High-Level Insights:**
+        - **Vulnerability Gap:** Pedestrians and Motorcyclists consistently show the highest **Average Cost per Accident**, reflecting the extreme physical vulnerability of these users compared to those in passenger vehicles.
+        - **Systemic Volume vs. Severity:** While Passenger Cars dominate the **Total Economic Burden** due to sheer volume (bottom-right of the matrix), individual incidents involving vulnerable road users represent a higher "per-crash" loss.
+        - **Infrastructure Priority:** Modes appearing in the top-left quadrant of the Vulnerability Matrix (high severity, lower volume) often indicate a need for targeted safety interventions like protected lanes or specialized signal timing.
+    """)
+    # ----------------------------------
+
     st.write("""
         This analysis breaks down the economic burden of crashes based on the modes of transportation involved. 
         **Comprehensive Cost** includes medical expenses, lost productivity, property damage, and the monetized value of pain and suffering.
@@ -1248,7 +1258,6 @@ with tab5:
         
     else:
         st.warning("No Mode-specific data found in the current selection.")
-
 with tab6:
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
