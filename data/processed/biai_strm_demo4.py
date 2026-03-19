@@ -732,15 +732,26 @@ k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["🚶Top Predictors", "🗺️ Geographic Risk", "🚨 Speed and Severity", "⏰ Temporal Patterns", "💰 Transportation Mode Analysis", "🧠 Prescriptive Actions", "📈 2026 Monthly Forecast" ])
 
 with tab1:
-    st.write("##### The top predictors and prescriptive actions were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.")
+    st.subheader("Top Predictors and Historical Trends for Crash Cost and Volume")
+    st.write(""" The top predictors of estimated cost were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.""")
+    st.info("""
+        **💡High-Level Insights:**
+        - The top 3 predictors for estimated cost are **pedestrian involved**, **motorcycle involved**, and **crash speed limit**.
+        - Within our dataset, **2025** had the lowest estimated total cost and the fewest crashes. **2018** had the highest estimated total cost and the most crashes. 
+        - 2020 had low estimated costs and number of crashes compared to previous years and the two years immediately after due to work from home during COVID.
+    """)
+
     shap_output, historicaloverview = st.columns([1, 2], gap="large")
+    
     with shap_output:
-        st.subheader("Top Predictors of Estimated Cost")
-        st.image("data/processed/outputs/BI to AI SHAP vf.png", width=800)
-        st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. This SHAP summary plot shows how each feature influences the model's predicted crash cost relative to the average. Features are ranked by importance (top = most impactful). Each dot represents an individual crash — red dots indicate a high feature value, blue dots indicate a low feature value. Dots to the right of center (positive SHAP) mean that feature increased the predicted cost; dots to the left (negative SHAP) mean it decreased the predicted cost. The three most influential predictors of estimated crash cost are pedestrian involved, motorcycle involved, and crash speed limit.")
+        st.write("#### Top Predictors of Estimated Cost")
+        st.info("The visual below shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. This SHAP summary plot shows how each feature influences the model's predicted crash cost relative to the average.  \n\n Features are ranked by importance (top = most impactful). Each dot represents an individual crash — red dots indicate a high feature value, blue dots indicate a low feature value.  \n\n Dots to the right of center (positive SHAP) mean that feature increased the predicted cost; dots to the left (negative SHAP) mean it decreased the predicted cost.")
+        st.image("data/processed/outputs/BI to AI SHAP vf.png", width=1200)
+        #st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. This SHAP summary plot shows how each feature influences the model's predicted crash cost relative to the average. Features are ranked by importance (top = most impactful). Each dot represents an individual crash — red dots indicate a high feature value, blue dots indicate a low feature value. Dots to the right of center (positive SHAP) mean that feature increased the predicted cost; dots to the left (negative SHAP) mean it decreased the predicted cost. The three most influential predictors of estimated crash cost are pedestrian involved, motorcycle involved, and crash speed limit.")
     
     with historicaloverview:
-        st.subheader("Historical Trends")
+        st.write("#### Historical Trends")
+        st.info("The below graphs update based on the fiscal years and corridors selected in the Global Filters side bar.")
 
         st.write("**Estimated Total Comprehensive Cost per Year**")
         df_total_cost= df.groupby("Year")["Estimated Total Comprehensive Cost"].sum().reset_index()
@@ -1341,7 +1352,7 @@ with tab6:
 with tab7:  
     st.subheader(f"2026 Monthly Forecast")
     st.write("""
-        This analysis shows the monthly estimated cost for 2026. The forecasted cast was calculated by multiplying a predicted total number of crash per month by the predicted average cost per crash each month. 
+        This analysis shows the monthly estimated cost for 2026. The forecasted cost was calculated by multiplying a predicted total number of crash per month by the predicted average cost per crash each month. 
         The total number of crashes in a month was predicted using an ARIMA model to account for seasonality. The average cost per crash per month was predicted using our random forest model.
     """)     
 
