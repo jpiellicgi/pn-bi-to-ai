@@ -37,6 +37,12 @@ CSV_PATH2 = f"{DATA_DIR}/outputs/{CSV_FILENAME2}"
 CSV_FILENAME3 = "cost_forecast_2026.csv"
 CSV_PATH3 = f"{DATA_DIR}/{CSV_FILENAME3}"
 
+CSV_FILENAME4 = "cost_forecast_2026_per_crash.csv"
+CSV_PATH4 = f"{DATA_DIR}/{CSV_FILENAME4}"
+
+CSV_FILENAME5 = "crash_forecast_2026.csv"
+CSV_PATH5 = f"{DATA_DIR}/{CSV_FILENAME5}"
+
 # --- 3. SMART ASSET LOADER ---
 def get_cgi_logo():
     """
@@ -699,6 +705,18 @@ except Exception as e:
     st.error(f"Forecasting dataset load failed: {e}")
     st.stop()   
 
+try:
+    df_cost_forecast_2026_per_crash = pd.read_csv(CSV_PATH4)
+except Exception as e:
+    st.error(f"Forecasting per crash dataset load failed: {e}")
+    st.stop()    
+
+try:
+    df_crash_forecast_2026 = pd.read_csv(CSV_PATH5)
+except Exception as e:
+    st.error(f"Forecasting crash count dataset load failed: {e}")
+    st.stop()    
+
 # --- SIDEBAR (Logo Removed from here) ---
 with st.sidebar:
     st.title("Global Filters")
@@ -747,7 +765,6 @@ with tab1:
         st.write("#### Top Predictors of Estimated Cost")
         st.info("The visual below shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. This SHAP summary plot shows how each feature influences the model's predicted crash cost relative to the average.  \n\n Features are ranked by importance (top = most impactful). Each dot represents an individual crash — red dots indicate a high feature value, blue dots indicate a low feature value.  \n\n Dots to the right of center (positive SHAP) mean that feature increased the predicted cost; dots to the left (negative SHAP) mean it decreased the predicted cost.")
         st.image("data/processed/outputs/BI to AI SHAP vf.png", width=1200)
-        #st.write("This shows the feature importances assigned by SHAP for each feature for the prediction of estimated cost in our random forest model. This SHAP summary plot shows how each feature influences the model's predicted crash cost relative to the average. Features are ranked by importance (top = most impactful). Each dot represents an individual crash — red dots indicate a high feature value, blue dots indicate a low feature value. Dots to the right of center (positive SHAP) mean that feature increased the predicted cost; dots to the left (negative SHAP) mean it decreased the predicted cost. The three most influential predictors of estimated crash cost are pedestrian involved, motorcycle involved, and crash speed limit.")
     
     with historicaloverview:
         st.write("#### Historical Trends")
@@ -1329,9 +1346,43 @@ with tab7:
     st.write("""
         This analysis shows the monthly estimated cost for 2026. The forecasted cost was calculated by multiplying a predicted total number of crash per month by the predicted average cost per crash each month. 
         The total number of crashes in a month was predicted using an ARIMA model to account for seasonality. The average cost per crash per month was predicted using our random forest model.
-    """)     
+    """)
 
+    forecasted_total_cost_2026= df_cost_forecast_2026["total_predicted_cost"].sum()
+    forecasted_crash_count_2026= df_crash_forecast_2026["forecasted_crash_count"].sum()
+
+    st.info(f"""
+        **💡High-Level Insights:**
+        - The forecasted total cost for 2026 is **${forecasted_total_cost_2026:,.2f}**.
+        - The forecasted total number of crashes in 2026 is **{forecasted_crash_count_2026:,}**.
+        - **February** has the highest forecasted cost and number of crashes. 
+        - **January** has the lowest forecasted cost and number of crashes. 
+    """)
+
+    #Monthly total cost forecast
+    st.write("#### Forecasted Total Cost per Month")
     df_monthly_crash_total_cost= df_cost_forecast_2026[['month','total_predicted_cost']]
     fig_monthly_crash_total_cost= px.bar(df_monthly_crash_total_cost, x="month", y="total_predicted_cost", text_auto=".2s")
+    fig_monthly_crash_total_cost.update_layout(
+        height=400, 
+        width=800,
+        margin=dict(l=100, r=100, t=20, b=20), # Tighten whitespace
+        yaxis_tickprefix='$'
+    )
+    fig_monthly_crash_total_cost.update_xaxes(title_text="Month", type='category')
+    fig_monthly_crash_total_cost.update_yaxes(title_text="Total Predicted Cost")
     fig_monthly_crash_total_cost.update_traces(marker_color='#5236ab')
     st.plotly_chart(fig_monthly_crash_total_cost)  
+
+    #Monthly Count Forecast
+    st.write("#### Forecasted Number of Crashes per Month")
+    fig_forecasted_crash_count= px.bar(df_crash_forecast_2026, x="month", y="forecasted_crash_count", text_auto=".2s")
+    fig_forecasted_crash_count.update_layout(
+        height=400, 
+        width=800,
+        margin=dict(l=100, r=100, t=20, b=20) # Tighten whitespace
+        )
+    fig_forecasted_crash_count.update_xaxes(title_text="Month", type='category')
+    fig_forecasted_crash_count.update_yaxes(title_text="Forecasted Crash Count")
+    fig_forecasted_crash_count.update_traces(marker_color='#5236ab')
+    st.plotly_chart(fig_forecasted_crash_count)
