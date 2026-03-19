@@ -1416,23 +1416,23 @@ with tab7:
     st.plotly_chart(fig_forecasted_crash_count)
 
 st.divider()
-    st.subheader("Chatbot 🤖")    
+st.subheader("Chatbot 🤖")    
     
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+if "messages" not in st.session_state:
+    st.session_state.messages = []
     
-    for m in st.session_state.messages:
-        with st.chat_message(m["role"]):
-            st.write(m["content"])
+for m in st.session_state.messages:
+    with st.chat_message(m["role"]):
+        st.write(m["content"])
     
-    user_input = st.chat_input("Ask a question...")
+user_input = st.chat_input("Ask a question...")
     
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        with st.chat_message("user"):
-            st.write(user_input)
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+         st.write(user_input)
     
-        response = f"You said: {user_input}"
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        with st.chat_message("assistant"):
-            st.write(response)
+    response = f"You said: {user_input}"
+    st.session_state.messages.append({"role": "assistant", "content": response})
+    with st.chat_message("assistant"):
+        st.write(response)
