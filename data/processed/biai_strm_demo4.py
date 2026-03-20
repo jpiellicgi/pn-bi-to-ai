@@ -898,7 +898,7 @@ else:
 if LOGO_PATH:
     st.image(LOGO_PATH, width=180)
 
-st.title("Safety Intelligence Dashboard")
+st.title("Road Safety Intelligence Dashboard")
 st.caption(f"Analyzing: **{current_focus}**")
 
 k1, k2, k3 = st.columns(3)
