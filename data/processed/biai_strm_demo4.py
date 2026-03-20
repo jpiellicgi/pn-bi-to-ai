@@ -730,69 +730,161 @@ with st.sidebar:
     st.divider()
     st.subheader("Chatbot 🤖")    
     
+    # --------------------------
+    # INIT + CLEAR CHAT BUTTON
+    # --------------------------
+    
     if "initialized" not in st.session_state:
         st.session_state.messages = []
         st.session_state.initialized = True
     
-    if st.button("Clear Chat"):    
+    if st.button("Clear Chat"):
         st.session_state["messages"] = []
         st.session_state["initialized"] = False
         st.rerun()
-        
+    
     if "messages" not in st.session_state:
         st.session_state.messages = []
-        
+    
+    if "awaiting_followup" not in st.session_state:
+        st.session_state.awaiting_followup = None
+    
+    # Display conversation history
     for m in st.session_state.messages:
         with st.chat_message(m["role"]):
             st.write(m["content"])
-
+    
+    
+    # --------------------------
+    # CHART FUNCTION FOR FOLLOW-UP
+    # --------------------------
+    
+    def summer_forecast_chart():
+        import plotly.express as px
+    
+        df_summer = df_crash_forecast_2026[
+            df_crash_forecast_2026["month"].isin(["June 2026", "July 2026", "August 2026"])
+        ]
+    
+        fig = px.bar(
+            df_summer,
+            x="month",
+            y="forecasted_crash_count",
+            text_auto=".2s",
+            title="Crash Forecast for Summer 2026"
+        )
+        fig.update_layout(
+            height=300,
+            width=500,
+            margin=dict(l=40, r=40, t=40, b=40)
+        )
+        fig.update_traces(marker_color="#5236ab")
+        return fig
+    
+    
+    # --------------------------
+    # FOLLOW-UP RESPONSES
+    # --------------------------
+    
+    followup_responses = {
+        "avg_cost_2025": {
+            "text": (
+                "This comes from the **2025 Crash Cost Summary Card**, "
+                "which aggregates the average comprehensive cost for all reported crashes."
+            ),
+            "chart": None
+        },
+        "summer_forecast": {
+            "text": (
+                "Here’s the portion of the **Seasonal Crash Forecast chart** showing "
+                "predicted crashes for **June–August 2026**:"
+            ),
+            "chart": summer_forecast_chart
+        }
+    }
+    
+    
+    # --------------------------
+    # MAIN BOT LOGIC
+    # --------------------------
+    
     def fake_bot_response(user_text):
+        text = user_text.lower()
+    
+        # FOLLOW-UP HANDLING
+        if st.session_state.awaiting_followup:
+            follow_id = st.session_state.awaiting_followup
+            st.session_state.awaiting_followup = None
+    
+            if text in ["yes", "y", "yep", "yeah", "sure", "ok", "okay", "please"]:
+                return followup_responses[follow_id]
+    
+            return {"text": "No problem — feel free to ask about another chart!", "chart": None}
+    
+        # NORMAL Q/A MATCHING
         qa_pairs = [
             {
                 "keywords": ["2025", "average", "crash cost", "estimated", "comprehensive cost"],
                 "response": (
-                    "The **average Estimated Total Comprehensive Cost** for a crash in **2025** was **$297,773**."
+                    "The **average Estimated Total Comprehensive Cost** for a crash in **2025** "
+                    "was **$297,773**."
                     "\n\n_Do you want to know how this answer was generated?_"
-                )
+                ),
+                "followup_id": "avg_cost_2025"
             },
             {
                 "keywords": ["summer", "forecast", "number of crashes", "this year", "2026", "predicted"],
                 "response": (
                     "The forecasted **total number of crashes** from **June through August 2026** is **750**."
                     "\n\n_Do you want to know how this answer was generated?_"
-                )
-            }
+                ),
+                "followup_id": "summer_forecast"
+            },
         ]
-        text = user_text.lower()
-
+    
         for pair in qa_pairs:
-            if any(k.lower() in text for k in pair["keywords"]):
-                return pair["response"]
-
-        # Default fallback response
-        return "Good question! Let me know what part of the dashboard you'd like to explore."
-        
+            if any(k in text for k in pair["keywords"]):
+                st.session_state.awaiting_followup = pair["followup_id"]
+                return {"text": pair["response"], "chart": None}
+    
+        # DEFAULT RESPONSE
+        return {"text": "Good question! Let me know what part of the dashboard you'd like to explore.", "chart": None}
+    
+    
+    # --------------------------
+    # USER INPUT + TYPING ANIMATION
+    # --------------------------
+    
     user_input = st.chat_input("Ask a question...")       
-
+    
     if user_input:
+        # store user message
         st.session_state.messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.write(user_input)
     
-        full_response = fake_bot_response(user_input)
-
+        # compute bot reply (dictionary w/ "text", "chart")
+        bot_reply = fake_bot_response(user_input)
+        bot_text = bot_reply["text"]
+    
+        # display bot message with typing animation
         with st.chat_message("assistant"):
             placeholder = st.empty()
             placeholder.write("🤖 Thinking...")
-            time.sleep(1.0)   # adjust thinking delay
-
+            time.sleep(1.0)
+    
             typed_text = ""
-            for char in full_response:
+            for char in bot_text:
                 typed_text += char
                 placeholder.write(typed_text)
-                time.sleep(0.015)  # typing speed
+                time.sleep(0.015)
     
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+            # If this response includes a chart, display it under the text
+            if bot_reply["chart"] is not None:
+                st.plotly_chart(bot_reply"chart", use_container_width=True)
+    
+        # store bot message
+        st.session_state.messages.append({"role": "assistant", "content": bot_text})
 
 # Filter Logic
 df = df_raw1[df_raw1["Year"].isin(selected_years)]
