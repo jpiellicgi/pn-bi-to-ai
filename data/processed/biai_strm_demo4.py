@@ -750,11 +750,17 @@ with st.sidebar:
         qa_pairs = [
             {
                 "keywords": ["2025", "average", "crash cost", "estimated", "comprehensive cost"],
-                "response": "The **average Estimated Total Comprehensive Cost** for a crash in **2025** was **$297,773**."
+                "response": (
+                    "The **average Estimated Total Comprehensive Cost** for a crash in **2025** was **$297,773**."
+                    "\n\n_Do you want to know how this answer was generated?_"
+                )
             },
             {
-                "keywords":["summer", "forecast", "number of crashes","this year","2026","predicted"],
-                "response": "The forecasted **total number of crashes** from **June through August 2026** is **750**."
+                "keywords": ["summer", "forecast", "number of crashes", "this year", "2026", "predicted"],
+                "response": (
+                    "The forecasted **total number of crashes** from **June through August 2026** is **750**."
+                    "\n\n_Do you want to know how this answer was generated?_"
+                )
             }
         ]
         text = user_text.lower()
