@@ -759,7 +759,15 @@ with st.sidebar:
         with st.chat_message("user"):
              st.write(user_input)
         
-        response = fake_bot_response(user_input)
+        # “thinking…” message
+        with st.chat_message("assistant"):
+            thinking = st.empty()
+            thinking.write("⏳ Thinking...")
+            time.sleep(1.2)  # <--- adjust delay here
+    
+            response = fake_bot_response(user_input)
+            thinking.write(response)
+
         st.session_state.messages.append({"role": "assistant", "content": response})
         with st.chat_message("assistant"):
             st.write(response)
