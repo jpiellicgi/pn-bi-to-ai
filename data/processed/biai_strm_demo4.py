@@ -1074,7 +1074,7 @@ with tab2:
         st.plotly_chart(fig_m, use_container_width=True)
         
 with tab3:
-    st.subheader(f"🛡️ Impact of Speed Limit: {current_focus}")
+    st.subheader(f" Impact of Speed Limit: {current_focus}")
     st.info("""
         **💡High-Level Insights:**
         - Most crashes result in **severe** or **minor** injuries.
@@ -1298,7 +1298,7 @@ with tab4:
     st.plotly_chart(fig_speed, use_container_width=True)
 
 with tab5:
-    st.subheader(f"📊 Economic Impact by Transportation Type: {current_focus}")
+    st.subheader(f" Economic Impact by Transportation Type: {current_focus}")
     
     # --- ADDED: High Level Insights ---
     st.info("""
