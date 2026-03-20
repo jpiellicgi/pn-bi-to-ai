@@ -735,6 +735,22 @@ with st.sidebar:
     for m in st.session_state.messages:
         with st.chat_message(m["role"]):
             st.write(m["content"])
+
+    def fake_bot_response(user_text):
+        qa_pairs = [
+            {
+                "keywords": ["2025", "average", "crash cost", "estimated", "comprehensive cost"],
+                "response": "The **average Estimated Total Comprehensive Cost** for a crash in **2025** was **$297,773**."
+            }
+        ]
+        text = user_text.lower()
+
+        for pair in qa_pairs:
+            if any(k.lower() in text for k in pair["keywords"]):
+                return pair["response"]
+
+        # Default fallback response
+        return "Good question! Let me know what part of the dashboard you'd like to explore."
         
     user_input = st.chat_input("Ask a question...")
         
@@ -743,7 +759,7 @@ with st.sidebar:
         with st.chat_message("user"):
              st.write(user_input)
         
-        response = f"You said: {user_input}"
+        response = fake_bot_response(user_input)
         st.session_state.messages.append({"role": "assistant", "content": response})
         with st.chat_message("assistant"):
             st.write(response)
