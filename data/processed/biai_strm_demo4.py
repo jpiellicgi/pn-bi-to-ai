@@ -589,7 +589,7 @@ with st.sidebar:
     # Display conversation history    
     for m in st.session_state.messages:
         with st.chat_message(m["role"]):
-            st.write(m["content
+            st.write(m["content"])
        
     # --------------------------
     # CHART FUNCTION FOR FOLLOW-UP
