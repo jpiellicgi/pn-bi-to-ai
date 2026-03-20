@@ -632,14 +632,18 @@ with st.sidebar:
                 "This comes from the **2025 Crash Cost Summary Card**, "
                 "which aggregates the average comprehensive cost for all reported crashes."
             ),
-            "chart": None
+            "chart": None,
+            "post_text": None
         },
         "summer_forecast": {
             "text": (
-                "Here’s the portion of the **Seasonal Crash Forecast chart** showing "
+                "Here’s the portion of the **Forecasted Number of Crashes per Month** chart showing "
                 "predicted crashes for **June–August 2026**:"
             ),
-            "chart": summer_forecast_chart
+            "chart": summer_forecast_chart,           
+            "post_text": (
+                        "These three months summed to produce the total crash forecast."
+                    )
         }
     }
     
@@ -724,6 +728,9 @@ with st.sidebar:
                 to_chart = bot_reply["chart"]
                 fig = to_chart()
                 st.plotly_chart(fig, use_container_width=True)
+       
+            if bot_reply.get("post_text"):
+                st.write(bot_reply["post_text"])
     
         # store bot message
         st.session_state.messages.append({"role": "assistant", "content": bot_text})
