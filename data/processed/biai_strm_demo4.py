@@ -718,7 +718,7 @@ with st.sidebar:
     
             # If this response includes a chart, display it under the text
             if bot_reply["chart"] is not None:
-                to_chart = bot_reply("chart")
+                to_chart = bot_reply["chart"]
                 fig = to_chart()
                 st.write("DEBU chart value:", fig)
                 st.plotly_chart(fig, use_container_width=True)
