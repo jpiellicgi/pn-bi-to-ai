@@ -754,7 +754,7 @@ with st.sidebar:
             },
             {
                 "keywords":["summer", "forecast", "number of crashes","this year","2026","predicted"],
-                "response": "The forecasted **total number of crashes** from **June through August 2026** is **750**.
+                "response": "The forecasted **total number of crashes** from **June through August 2026** is **750**."
             }
         ]
         text = user_text.lower()
