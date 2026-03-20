@@ -751,6 +751,10 @@ with st.sidebar:
             {
                 "keywords": ["2025", "average", "crash cost", "estimated", "comprehensive cost"],
                 "response": "The **average Estimated Total Comprehensive Cost** for a crash in **2025** was **$297,773**."
+            },
+            {
+                "keywords":["summer", "forecast", "number of crashes","this year","2026","predicted"],
+                "response": "The forecasted **total number of crashes** from **June through August 2026** is **750**.
             }
         ]
         text = user_text.lower()
