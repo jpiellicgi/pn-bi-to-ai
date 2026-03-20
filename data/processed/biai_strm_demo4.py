@@ -761,25 +761,27 @@ with st.sidebar:
         # Default fallback response
         return "Good question! Let me know what part of the dashboard you'd like to explore."
         
-    user_input = st.chat_input("Ask a question...")
-        
+    user_input = st.chat_input("Ask a question...")       
+
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
-             st.write(user_input)
-        
-        # “thinking…” message
-        with st.chat_message("assistant"):
-            thinking = st.empty()
-            thinking.write("⏳ Thinking...")
-            time.sleep(1.2)  # <--- adjust delay here
+            st.write(user_input)
     
-            response = fake_bot_response(user_input)
-            thinking.write(response)
+        full_response = fake_bot_response(user_input)
 
-        st.session_state.messages.append({"role": "assistant", "content": response})
         with st.chat_message("assistant"):
-            st.write(response)
+            placeholder = st.empty()
+            placeholder.write("🤖 Thinking...")
+            time.sleep(1.0)   # adjust thinking delay
+
+            typed_text = ""
+            for char in full_response:
+                typed_text += char
+                placeholder.write(typed_text)
+                time.sleep(0.015)  # typing speed
+    
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 # Filter Logic
 df = df_raw1[df_raw1["Year"].isin(selected_years)]
