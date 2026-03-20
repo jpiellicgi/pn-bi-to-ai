@@ -629,8 +629,10 @@ with st.sidebar:
     followup_responses = {
         "avg_cost_2025": {
             "text": (
-                "This comes from the **2025 Crash Cost Summary Card**, "
-                "which aggregates the average comprehensive cost for all reported crashes."
+                "This comes from the **Estimated Total Comprehensive Cost per Year**, "
+                "and the **Total Number of Crashes per Year** charts, where the "
+                "**Estimated Total Comprehensive Cost** is divided by the "
+                "**Number of Crashes** for **2025**."
             ),
             "chart": None,
             "post_text": None
@@ -642,7 +644,7 @@ with st.sidebar:
             ),
             "chart": summer_forecast_chart,           
             "post_text": (
-                        "These three months summed to produce the total crash forecast."
+                        "These three months were summed to produce the total crash forecast."
                     )
         }
     }
