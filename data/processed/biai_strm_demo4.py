@@ -726,6 +726,28 @@ with st.sidebar:
     selected_street = st.selectbox("📍 Corridor:", ["All Corridors"] + top_10_names)
     corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
 
+    st.divider()
+    st.subheader("Chatbot 🤖")    
+        
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+        
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]):
+            st.write(m["content"])
+        
+    user_input = st.chat_input("Ask a question...")
+        
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+             st.write(user_input)
+        
+        response = f"You said: {user_input}"
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"):
+            st.write(response)
+
 # Filter Logic
 df = df_raw1[df_raw1["Year"].isin(selected_years)]
 if selected_street != "All Corridors":
@@ -1415,24 +1437,3 @@ with tab7:
     fig_forecasted_crash_count.update_traces(marker_color='#5236ab')
     st.plotly_chart(fig_forecasted_crash_count)
 
-st.divider()
-st.subheader("Chatbot 🤖")    
-    
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-    
-for m in st.session_state.messages:
-    with st.chat_message(m["role"]):
-        st.write(m["content"])
-    
-user_input = st.chat_input("Ask a question...")
-    
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-         st.write(user_input)
-    
-    response = f"You said: {user_input}"
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    with st.chat_message("assistant"):
-        st.write(response)
