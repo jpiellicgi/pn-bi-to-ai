@@ -600,25 +600,39 @@ with st.sidebar:
         import plotly.express as px
     
         df_summer = df_crash_forecast_2026[
-            df_crash_forecast_2026["month"].isin(["June 2026", "July 2026", "August 2026"])
-        ]
+            df_crash_forecast_2026["month"].isin(["2026-06", "2026-07", "2026-08"])
+        ].copy()
     
+        # Map new labels
+        month_label_map = {
+            "2026-06": "Jun 26",
+            "2026-07": "Jul 26",
+            "2026-08": "Aug 26"
+        }
+    
+        df_summer["pretty_month"] = df_summer["month"].map(month_label_map)
+    
+        # Build the chart
         fig = px.bar(
             df_summer,
-            x="month",
+            x="pretty_month",
             y="forecasted_crash_count",
             text_auto=".2s",
             title="Crash Forecast for Summer 2026"
         )
+    
         fig.update_layout(
             height=300,
             width=500,
-            margin=dict(l=40, r=40, t=40, b=40)
+            margin=dict(l=40, r=40, t=40, b=40),
+            xaxis_title="Month",
+            yaxis_title="Forecasted Crash Count"  
         )
+    
         fig.update_traces(marker_color="#5236ab")
+    
         return fig
-    
-    
+        
     # --------------------------
     # FOLLOW-UP RESPONSES
     # --------------------------
