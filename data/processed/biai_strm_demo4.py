@@ -729,6 +729,14 @@ with st.sidebar:
 
     st.divider()
     st.subheader("Chatbot 🤖")    
+    
+    if "initialized" not in st.session_state:
+        st.session_state.messages = []
+        st.session_state.initialized = True
+    
+    if st.button("Clear Chat"):
+        st.session_state.messages = []
+        st.experimental_rerun()
         
     if "messages" not in st.session_state:
         st.session_state.messages = []
