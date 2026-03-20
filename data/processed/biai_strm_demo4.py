@@ -744,9 +744,9 @@ k2.metric("Lives Lost", int(df["death_cnt"].sum()))
 k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 
 # --- TABS ---
-tab2, tab1, tab3, tab4, tab5, tab6, tab7 = st.tabs(["🗺️ Geographic Risk", "🚶Top Predictors", "🚨 Speed and Severity", "⏰ Temporal Patterns", "💰 Transportation Mode Analysis", "🧠 Prescriptive Actions", "📈 2026 Monthly Forecast" ])
+tab_geo, tab_temp, tab_spe, tab_trns, tab_pred, tab_fore, tab_pres = st.tabs(["🗺️ Geographic Risk", "⏰ Temporal Patterns", "🚨 Speed and Severity",  "💰 Transportation Mode Analysis", "🚶Top Predictors", "📈 2026 Monthly Forecast", "🧠 Prescriptive Actions"])
 
-with tab1:
+with tab_pred:
     st.subheader("Top Predictors and Historical Trends for Crash Cost and Volume")
     st.write(""" The top predictors of estimated cost were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.""")
     st.info("""
@@ -802,7 +802,7 @@ with tab1:
         fig_crash_count.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_crash_count)
 
-with tab2:
+with tab_geo:
     st.subheader("Geographic Risk Distribution")
     
     # --- ADDED: High Level Insights ---
@@ -910,7 +910,7 @@ with tab2:
         fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
         st.plotly_chart(fig_m, use_container_width=True)
         
-with tab3:
+with tab_spe:
     st.subheader(f" Impact of Speed Limit: {current_focus}")
     st.info("""
         **💡High-Level Insights:**
@@ -1001,7 +1001,7 @@ with tab3:
         fig.update_yaxes(title_text="Average Estimated Cost ($)", secondary_y=True, tickprefix="$")
         st.plotly_chart(fig, use_container_width=True)    
 
-with tab4:
+with tab_temp:
     st.subheader(f"Temporal Patterns: {current_focus}")
     st.write("""The visuals on this page shows the number of crashes that occurred during different timeframes as well the average estimated cost and the severity of those crashes.""")
     st.info("""
@@ -1134,7 +1134,7 @@ with tab4:
     fig_speed.update_yaxes(ticksuffix=" MPH")
     st.plotly_chart(fig_speed, use_container_width=True)
 
-with tab5:
+with tab_trns:
     st.subheader(f" Economic Impact by Transportation Type: {current_focus}")
     
     # --- ADDED: High Level Insights ---
@@ -1255,7 +1255,7 @@ with tab5:
         
     else:
         st.warning("No Mode-specific data found in the current selection.")
-with tab6:
+with tab_pres:
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
     st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
@@ -1366,7 +1366,7 @@ with tab6:
         st.error("Prescriptive data unavailable.")
 
 
-with tab7:  
+with tab_fore:  
     st.subheader(f"2026 Monthly Forecast")
     st.write("""
         This analysis shows the monthly estimated cost for 2026. The forecasted cost was calculated by multiplying a predicted total number of crash per month by the predicted average cost per crash each month. 
