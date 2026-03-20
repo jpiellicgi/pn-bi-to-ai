@@ -565,7 +565,18 @@ with st.sidebar:
     corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
 
     st.divider()
-    st.subheader("Chatbot 🤖")    
+    st.subheader("Chatbot 🤖") 
+
+    # Scrollable chat container styling
+    st.markdown("""
+    <style>
+    .sidebar-chat-box {
+        height: 350px;         /* adjust as needed */
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
     # --------------------------
     # INIT + CLEAR CHAT BUTTON
@@ -586,12 +597,13 @@ with st.sidebar:
     if "awaiting_followup" not in st.session_state:
         st.session_state.awaiting_followup = None
     
-    # Display conversation history
+    # Display conversation history    
+    st.markdown('<div class="sidebar-chat-box">', unsafe_allow_html=True)    
     for m in st.session_state.messages:
         with st.chat_message(m["role"]):
-            st.write(m["content"])
-    
-    
+            st.write(m["content"])    
+    st.markdown('</div>', unsafe_allow_html=True)
+       
     # --------------------------
     # CHART FUNCTION FOR FOLLOW-UP
     # --------------------------
