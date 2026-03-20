@@ -734,9 +734,10 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.initialized = True
     
-    if st.button("Clear Chat"):
-        st.session_state.messages = []
-        st.experimental_rerun()
+    if st.button("Clear Chat"):    
+        st.session_state["messages"] = []
+        st.session_state["initialized"] = False
+        st.rerun()
         
     if "messages" not in st.session_state:
         st.session_state.messages = []
