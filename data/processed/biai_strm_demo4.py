@@ -13,6 +13,7 @@ from plotly.subplots import make_subplots
 import pydeck as pdk
 import altair as alt
 import requests
+import time
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
