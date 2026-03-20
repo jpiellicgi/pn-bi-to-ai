@@ -603,22 +603,11 @@ with st.sidebar:
             df_crash_forecast_2026["month"].isin(["2026-06", "2026-07", "2026-08"])
         ].copy()
     
-        # Map new labels
-        month_label_map = {
-            "2026-06": "Jun 26",
-            "2026-07": "Jul 26",
-            "2026-08": "Aug 26"
-        }
-    
-        df_summer["pretty_month"] = df_summer["month"].map(month_label_map)
-    
-        # Build the chart
         fig = px.bar(
             df_summer,
-            x="pretty_month",
+            x="month",
             y="forecasted_crash_count",
-            text_auto=".2s",
-            title="Crash Forecast for Summer 2026"
+            text_auto=".2s"
         )
     
         fig.update_layout(
@@ -734,7 +723,6 @@ with st.sidebar:
             if bot_reply["chart"] is not None:
                 to_chart = bot_reply["chart"]
                 fig = to_chart()
-                st.write("DEBU chart value:", fig)
                 st.plotly_chart(fig, use_container_width=True)
     
         # store bot message
