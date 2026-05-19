@@ -565,7 +565,7 @@ with st.sidebar:
     corridor_options = ["All Corridors"] + top_10_names + ["--- Full Street List ---"] + sorted(df_raw1["rpt_street_name"].unique().tolist())
 
     st.divider()
-    st.subheader("Chatbot 🤖")    
+    st.subheader("Chatbot 🤖") 
     
     # --------------------------
     # INIT + CLEAR CHAT BUTTON
@@ -586,12 +586,11 @@ with st.sidebar:
     if "awaiting_followup" not in st.session_state:
         st.session_state.awaiting_followup = None
     
-    # Display conversation history
+    # Display conversation history    
     for m in st.session_state.messages:
         with st.chat_message(m["role"]):
             st.write(m["content"])
-    
-    
+       
     # --------------------------
     # CHART FUNCTION FOR FOLLOW-UP
     # --------------------------
@@ -600,25 +599,28 @@ with st.sidebar:
         import plotly.express as px
     
         df_summer = df_crash_forecast_2026[
-            df_crash_forecast_2026["month"].isin(["June 2026", "July 2026", "August 2026"])
-        ]
+            df_crash_forecast_2026["month"].isin(["2026-06", "2026-07", "2026-08"])
+        ].copy()
     
         fig = px.bar(
             df_summer,
             x="month",
             y="forecasted_crash_count",
-            text_auto=".2s",
-            title="Crash Forecast for Summer 2026"
+            text_auto=".2s"
         )
+    
         fig.update_layout(
             height=300,
             width=500,
-            margin=dict(l=40, r=40, t=40, b=40)
+            margin=dict(l=40, r=40, t=40, b=40),
+            xaxis_title="Month",
+            yaxis_title="Forecasted Crash Count"  
         )
+    
         fig.update_traces(marker_color="#5236ab")
+    
         return fig
-    
-    
+        
     # --------------------------
     # FOLLOW-UP RESPONSES
     # --------------------------
@@ -626,17 +628,23 @@ with st.sidebar:
     followup_responses = {
         "avg_cost_2025": {
             "text": (
-                "This comes from the **2025 Crash Cost Summary Card**, "
-                "which aggregates the average comprehensive cost for all reported crashes."
+                "This comes from the **Estimated Total Comprehensive Cost per Year**, "
+                "and the **Total Number of Crashes per Year** charts, where the "
+                "**Estimated Total Comprehensive Cost** is divided by the "
+                "**Number of Crashes** for **2025**."
             ),
-            "chart": None
+            "chart": None,
+            "post_text": None
         },
         "summer_forecast": {
             "text": (
-                "Here’s the portion of the **Seasonal Crash Forecast chart** showing "
+                "Here’s the portion of the **Forecasted Number of Crashes per Month** chart showing "
                 "predicted crashes for **June–August 2026**:"
             ),
-            "chart": summer_forecast_chart
+            "chart": summer_forecast_chart,           
+            "post_text": (
+                        "These three months were summed to produce the total crash forecast."
+                    )
         }
     }
     
@@ -718,7 +726,12 @@ with st.sidebar:
     
             # If this response includes a chart, display it under the text
             if bot_reply["chart"] is not None:
-                st.plotly_chart(bot_reply["chart"], use_container_width=True)
+                to_chart = bot_reply["chart"]
+                fig = to_chart()
+                st.plotly_chart(fig, use_container_width=True)
+       
+            if bot_reply.get("post_text"):
+                st.write(bot_reply["post_text"])
     
         # store bot message
         st.session_state.messages.append({"role": "assistant", "content": bot_text})
@@ -744,9 +757,9 @@ k2.metric("Lives Lost", int(df["death_cnt"].sum()))
 k3.metric("Economic Impact", f"${df['Estimated Total Comprehensive Cost'].sum() / 1e9:.2f}B")
 
 # --- TABS ---
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["🚶Top Predictors", "🗺️ Geographic Risk", "🚨 Speed and Severity", "⏰ Temporal Patterns", "💰 Transportation Mode Analysis", "🧠 Prescriptive Actions", "📈 2026 Monthly Forecast" ])
+tab_geo, tab_temp, tab_spe, tab_trns, tab_pred, tab_fore, tab_pres = st.tabs(["🗺️ Geographic Risk", "⏰ Temporal Patterns", "🚨 Speed and Severity",  "💰 Transportation Mode Analysis", "🚶Top Predictors", "📈 2026 Monthly Forecast", "🧠 Prescriptive Actions"])
 
-with tab1:
+with tab_pred:
     st.subheader("Top Predictors and Historical Trends for Crash Cost and Volume")
     st.write(""" The top predictors of estimated cost were determined through a random forest model trained on crash data from the City of Austin from the 2018 to present.""")
     st.info("""
@@ -802,7 +815,7 @@ with tab1:
         fig_crash_count.update_traces(marker_color='#5236ab')
         st.plotly_chart(fig_crash_count)
 
-with tab2:
+with tab_geo:
     st.subheader("Geographic Risk Distribution")
     
     # --- ADDED: High Level Insights ---
@@ -910,7 +923,7 @@ with tab2:
         fig_m.update_layout(margin=dict(l=0, r=0, t=0, b=0), height=600)
         st.plotly_chart(fig_m, use_container_width=True)
         
-with tab3:
+with tab_spe:
     st.subheader(f" Impact of Speed Limit: {current_focus}")
     st.info("""
         **💡High-Level Insights:**
@@ -1001,7 +1014,7 @@ with tab3:
         fig.update_yaxes(title_text="Average Estimated Cost ($)", secondary_y=True, tickprefix="$")
         st.plotly_chart(fig, use_container_width=True)    
 
-with tab4:
+with tab_temp:
     st.subheader(f"Temporal Patterns: {current_focus}")
     st.write("""The visuals on this page shows the number of crashes that occurred during different timeframes as well the average estimated cost and the severity of those crashes.""")
     st.info("""
@@ -1134,7 +1147,7 @@ with tab4:
     fig_speed.update_yaxes(ticksuffix=" MPH")
     st.plotly_chart(fig_speed, use_container_width=True)
 
-with tab5:
+with tab_trns:
     st.subheader(f" Economic Impact by Transportation Type: {current_focus}")
     
     # --- ADDED: High Level Insights ---
@@ -1255,7 +1268,7 @@ with tab5:
         
     else:
         st.warning("No Mode-specific data found in the current selection.")
-with tab6:
+with tab_pres:
     st.subheader("Prescriptive Actions: Recommended Interventions & Savings")
     st.caption("Explore high-impact locations, recommended interventions, and expected reductions.")
     st.caption("Note: The **Year** filter in the global sidebar does not apply to this tab.")
@@ -1366,7 +1379,7 @@ with tab6:
         st.error("Prescriptive data unavailable.")
 
 
-with tab7:  
+with tab_fore:  
     st.subheader(f"2026 Monthly Forecast")
     st.write("""
         This analysis shows the monthly estimated cost for 2026. The forecasted cost was calculated by multiplying a predicted total number of crash per month by the predicted average cost per crash each month. 
